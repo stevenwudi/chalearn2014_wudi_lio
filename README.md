@@ -19,29 +19,24 @@ Dependency: Theano
 -------
 
 	
-Test
+To Lio:
 -------
-To reproduce the experimental result for test submission, there is a Python file:
+To train the network, you first need to run and change the following code:
 
-Step3_SK_Test_prediction.py and there are three paths needs to be changed accordingly:
+(1) Step1_preproc.py:
+Note I used first 650 examples for training and 50 for validation with 1000 frames per storage. (line 85-91)
+change input directory: line 37: raise NotImplementedError("TODO: implement this function.")-->set to  data = r"I:\Kaggle_multimodal\Training"
+change destination directory:  lin 87-90: dest = r"I:\Kaggle_multimodal\Training_prepro\train_wudi" # dir to  destination processed data
 
-line: 60, Data folder (Test data)
-data_path=os.path.join("I:\Kaggle_multimodal\Test\Test\\")  
-line: 62, Predictions folder (output)
-outPred=r'.\training\test'
-line: 64, Submision folder (output)
-outSubmision=r'.\training\test_submission'
 
-It takes about ~20 second for each example file using only skeleton information. (I use Theano GPU model, but I reckon CPU model should almost of the same speed)
+(2) Step2_Train_CNN.py:
+in the file: classes/hyperparameters.py you will have all the specs, e.g., train, valid dir,line 14-19:
+line 27: use.fast_conv
+
+It takes about 600 second for each example file . (I use Theano GPU model, but I reckon CPU model should almost of the same speed)
 
 Train
 -------
-To train the network, you first need to extract the skeleton information 
-1)Step1_SK_Neutral_Realtime.py--> extract neutral frames (aka., 5 frames before and after the gesture)
-2) Step1_SK_Realtime.py--> extract gesture frames
-
-3)Step1_DBN_Strucutre2.py-->Start training the networks (Step1_DBN.py specifies a smaller networks, train faster, but the larger the net is always better)
-
 Voila, here you go.
 
 
