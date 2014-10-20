@@ -1,0 +1,85 @@
+********************************************************************************
+This is a README file accompanying source code submitted for the ChaLearn Looking at People Challenge 2014,
+track 3: Gesture Recognition
+http://gesture.chalearn.org/
+
+********************************************************************************
+ Team: liris
+
+ Members:
+ Natalia Neverova, natalia.neverova@liris.cnrs.fr (Université de Lyon, CNRS, INSA-Lyon, LIRIS, France)	
+ Christian Wolf, christian.wolf@liris.cnrs.fr (Université de Lyon, CNRS, INSA-Lyon, LIRIS, France)
+ Graham Taylor, gwtaylor@uoguelph.ca (University of Guelph, Canada)
+
+********************************************************************************
+This code has been tested on Ubuntu 12.04 platform with GeForce GTX 580 graphics card. 
+Using gpu for testing is beneficial in terms of speed but not obligatory.
+
+Dependencies:
+
+- python >= 2.4
+- NumPy >= 1.5.0
+- SciPy >= 0.8
+- OpenCV 2.4.8
+- BLAS installation (with Level 3 functionality)
+- Theano 0.6 (see http://deeplearning.net/software/theano/install.html)
+- for additional dependencies see the main script's "import" section listed below
+
+-------------------------------------------------------------------------------
+import gzip
+import os
+import sys
+import cv2
+import numpy
+import numpy.ma
+import scipy
+import scipy.io
+import scipy.linalg as LA
+import collections
+import time
+import random
+import re
+import shutil
+import copy
+import glob
+import math
+import pickle
+import cPickle
+import shutil
+import warnings
+import csv
+from functools import partial
+
+import theano
+import theano.tensor as T
+from theano import gof
+from theano.tensor.shared_randomstreams import RandomStreams
+from theano.tensor.nnet import conv
+from theano.tensor.signal import conv as convs
+from theano.tensor.signal import downsample
+from theano.ifelse import ifelse
+
+from conv3d2d_fred import conv3d
+from ChalearnLAPSampleNN import GestureSample
+-------------------------------------------------------------------------------
+
+********************************************************************************
+RUNNING THE SCRIPT
+********************************************************************************
+
+Open a terminal from the main folder and run:
+
+THEANO_FLAGS=mode=FAST_RUN,device=<mode>,floatX=float32 python predictions.pyc <data_folder> <gt_folder> 
+
+<mode> - specify "cpu" or "gpu".
+
+<data_folder> - directory containing test *.zip files. If not specified, data from ./data will be processed.
+
+<gt_folder> - directory containing ground truth labels (optional). If provided, overall test score will be calculated.
+Otherwise the script will generate predictions and store them in ./pred_csv.
+
+During processing, temporal directories ./temp/ and ./pred_csv/ will be created. 
+Please make sure you have necessary writing permissions and enough free space on your hard drive. 
+
+For a demo, run:
+THEANO_FLAGS=mode=FAST_RUN,device=cpu,floatX=float32 python predictions.pyc ./data/ ./gt/ 

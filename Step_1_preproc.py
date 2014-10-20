@@ -33,7 +33,6 @@ from functions.preproc_functions import *
 pc = "wudi"
 if pc=="wudi":
     data = r"I:\Kaggle_multimodal\Training" # dir of original data -- note that wudi has decompressed it!!!
-    dest = r"I:\Kaggle_multimodal\Training_prepro\train_wudi" # dir to  destination processed data
 elif pc=="lio":
     raise NotImplementedError("TODO: implement this function.")
 
@@ -52,7 +51,7 @@ vid_res = (480, 640) # 640 x 480 video resolution
 vid_shape_hand = (128, 128)
 vid_shape_body = (128, 128)
 
-batch_size = 10 # number of gesture instance
+batch_size = 20 # number of gesture instance
 used_joints = ['ElbowLeft', 'WristLeft', 'ShoulderLeft','HandLeft',
                 'ElbowRight', 'WristRight','ShoulderRight','HandRight',
                 'Head','Spine','HipCenter']
@@ -79,11 +78,18 @@ def main():
     #samples.sort()
     print len(samples), "samples found"
     #start preprocessing
-    preprocess(samples)
+    preprocess(samples, "validation")
 
-def preprocess(samples):
+def preprocess(samples, set="training"):
     for file_count, file in enumerate(samples):
-        if file_count < 650:  #wudi only used first 650 for validation !!! Lio be careful!
+        if (set=="training"):
+            condition = (file_count < 650)
+            dest = r"I:\Kaggle_multimodal\Training_prepro\train_wudi" # dir to  destination processed data
+        else:
+            condition = (file_count >= 650)
+            dest = r"I:\Kaggle_multimodal\Training_prepro\valid_wudi" # dir to  destination processed data
+        #set == "training" ? (condition = (file_count<650)) : (condition = (file_count>=650))
+        if condition:   #wudi only used first 650 for validation !!! Lio be careful!
             print("\t Processing file " + file)
             # Create the object to access the sample
             sample = GestureSample(os.path.join(data,file))
@@ -126,12 +132,12 @@ def preprocess(samples):
                 # we don't need user info. anyway
                 video = empty((2,)+gray.shape,dtype="uint8")
                 video[0],video[1] = gray,depth
-                store_preproc_wudi(video, skelet_feature, Targets.argmax(axis=1), skelet)
+                store_preproc_wudi(video, skelet_feature, Targets.argmax(axis=1), skelet, dest)
+        if condition and file_count==(len(samples)-1):
+            dump_last_data(video,skelet, Targets.argmax(axis=1), skelet, dest)
+            print 'Process',p_i,'finished'
 
-    dump_last_data()
-    print 'Process',p_i,'finished'
-
-def store_preproc_wudi(video,skelet, label, skelet_info):
+def store_preproc_wudi(video,skelet, label, skelet_info, dest):
     """
     Wudi modified how to- store the result
     original code is a bit hard to understand
@@ -150,7 +156,7 @@ def store_preproc_wudi(video,skelet, label, skelet_info):
         sk.append(skelet_info)
 
 
-    if count == batch_size:
+    if len(l) > 1000:
         make_sure_path_exists(dest)
         os.chdir(dest)
         file_name = "batch_"+"_"+str(batch_idx)+"_"+str(len(l))+".zip"
@@ -166,19 +172,20 @@ def store_preproc_wudi(video,skelet, label, skelet_info):
     
     count += 1
 
-def dump_last_data():
-        v = numpy.concatenate((v, video), axis=2)
-        s = numpy.concatenate((s, skelet), axis=0)
-        l = numpy.concatenate((l, label))
-        sk.append(skelet_info)
-        os.chdir(dest)
-        file_name = "batch_"+"_"+str(batch_idx)+"_"+str(len(l))+".zip"
-        if store_result:
-            file = gzip.GzipFile(file_name, 'wb')
-            dump((v,s,l, sk), file, -1)
-            file.close()
+def dump_last_data(video,skelet, label, skelet_info, dest):
+    global v,s,l, sk, count, batch_idx
+    v = numpy.concatenate((v, video), axis=2)
+    s = numpy.concatenate((s, skelet), axis=0)
+    l = numpy.concatenate((l, label))
+    sk.append(skelet_info)
+    os.chdir(dest)
+    file_name = "batch_"+"_"+str(batch_idx)+"_"+str(len(l))+".zip"
+    if store_result:
+        file = gzip.GzipFile(file_name, 'wb')
+        dump((v,s,l, sk), file, -1)
+        file.close()
 
-        print file_name
+    print file_name
 
 if __name__ == '__main__': 
     main()

@@ -12,7 +12,7 @@ class files:
     """
     def __init__(self, src):
         self.train = glob(src+'/train_wudi/batch_*.zip')#+glob(src+'/valid/batch_100_*.zip')
-        self.valid = glob(src+'/train_wudi/batch_*.zip')#[:2]
+        self.valid = glob(src+'/valid_wudi/batch_*.zip')#[:2]
         self.test = glob(src+'/train_wudi/batch_*.zip')#[:2]
         self.n_train = len(self.train) 
         self.n_valid = len(self.valid)
@@ -58,8 +58,8 @@ class mom:
 class tr:
     n_epochs = 1000 # number of epochs to train
     patience = 1 # number of unimproved epochs before decaying learning rate
-    batch_size = 100 # batchsize
-    in_shape = (batch_size,2,2,5,64,64) # (batchsize, gray/depth, body/hands, frames, w, h) input video shapes 
+    batch_size = 1000 # batchsize
+    in_shape = (batch_size,2,2,4,64,64) # (batchsize, gray/depth, body/hands, frames, w, h) input video shapes 
     rng = random.RandomState(1337) # this will make sure results are always the same
     first_report = True # report timing if first report
     moved = False

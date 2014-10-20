@@ -59,6 +59,9 @@ res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
 os.makedirs(res_dir)
 #  global variables/constants
 # ------------------------------------------------------------------------------
+if False:
+    import theano 
+    theano.config.compute_test_value = 'warn' #debug mode
 params = [] # all neural network parameters
 layers = [] # all architecture layers
 mini_updates = []
@@ -74,11 +77,15 @@ if use.mom:
     drop.p_hidden = shared(float32(drop.p_hidden_val))
 
 # symbolic variables
+# in shape: #frames * gray/depth * body/hand * 4 maps
 x = ndtensor(len(tr.in_shape))(name = 'x') # video input
 # x = T.TensorVariable(CudaNdarrayType([False] * len(in_shape))) # video input
 y = T.ivector(name = 'y') # labels
 idx_mini = T.lscalar(name="idx_mini") # minibatch index
 idx_micro = T.lscalar(name="idx_micro") # microbatch index
+x_ = _shared(empty(tr.in_shape))
+y_ = _shared(empty((tr.batch_size,)))
+y_int32 = T.cast(y_,'int32')
 
 # print parameters
 # ------------------------------------------------------------------------------
@@ -98,20 +105,16 @@ for c in (use, lr, batch, net, reg, drop, mom, tr):
 print "\n%s\n\t preparing data \n%s"%(('-'*30,)*2)
 ####################################################################
 ####################################################################
-x_ = _shared(empty(tr.in_shape))
-# x_ = shared(CudaNdarray(empty(in_shape, dtype=floatX)), borrow=True)
-y_ = _shared(empty((tr.batch_size,)))
-y_int32 = T.cast(y_,'int32')
 
 # print data sizes
 file_info = files(src)
 if use.valid2: file_info.n_test = len(file_info.valid2)
 else: file_info.n_test = 0
 write('data: total: %i train: %i valid: %i test: %i' % \
-    ((file_info.n_test+file_info.n_train+file_info.n_valid)*tr.batch_size, 
-        file_info.n_train*tr.batch_size, 
-        file_info.n_valid*tr.batch_size, 
-        file_info.n_test*tr.batch_size), res_dir)
+    ((file_info.n_test+file_info.n_train+file_info.n_valid), 
+        file_info.n_train, 
+        file_info.n_valid, 
+        file_info.n_test), res_dir)
 
 first_report2 = True
 epoch = 0
@@ -139,18 +142,13 @@ n_in_MLP = net.maps[-1]*net.n_convnets*prod(tr.video_shapes[-1])
 print 'MLP:', n_in_MLP, "->", net.hidden, "->", net.n_class, ""
 
 if use.depth:
-    if net.n_convnets==1: out = [x[:,0]]
-    elif net.n_convnets==2: out = [x[:,0], x[:,1]] # 2 nets: body and handt
-    else: out = [x[:,0,0:1], x[:,0,1:2], x[:,1,0:1], x[:,1,1:2]] # 4 nets
-else: 
-    if net.n_convnets==1: out = [x[:,0,0:1]]
-    else: out = [x[:,0,0:1], x[:,1,0:1]] # 2 nets without depth: left and right
+    if net.n_convnets==2: 
+        out = [x[:,:,0,:,:,:], x[:,:,1,:,:,:]] # 2 nets: body and hand
 
-# for i in xrange(len(out)): out[i] = var_norm(out[i])
 # build 3D ConvNet
 insp = []
 for stage in xrange(net.n_stages):
-    for i in xrange(len(out)): # for each convnet of the stage
+    for i in xrange(len(out)): # for body and hand
         # normalization
         if use.norm and stage==0: 
             gray_norm = NormLayer(out[i][:,0:1], method="lcn",
@@ -253,7 +251,7 @@ for i, (param, gparam) in enumerate(zip(params, gparams)):
         if mom.nag: # nesterov momentum
             mini_updates.append((param, param + momentum*v - get_update(i)))
         else:
-            mini_updatejins.append((param, param + v))
+            mini_updates.append((param, param + v))
     else:    
         mini_updates.append((param, param - get_update(i)))
 
@@ -310,46 +308,44 @@ insp_ = None
 for epoch in xrange(tr.n_epochs):
     ce = []
     print_params(params) 
+    ####################################################################
+    ####################################################################
+    print "\n%s\n\t epoch %d \n%s"%('-'*30, epoch, '-'*30)
+    ####################################################################
+    ####################################################################
     for i,train_file in enumerate(file_info.train):
-        if epoch==0 and i==1: time_start = time()
+        time_start = time()
         #load
         load_data(train_file, tr.rng, epoch, tr.batch_size, x_, y_)
         # train
         tr.batch_size = y_.get_value(borrow=True).shape[0]
         ce.append(_batch(train_model, tr.batch_size, batch, True, apply_updates))
-        #print 
-        if epoch==0: print "\t\t| "+training_report(ce[-1])
-        #if epoch==0: print insp_
-        #timing report
-        if i==1 and tr.first_report: 
-            timing_report(time()-time_start, tr.batch_size, res_dir)
+       
+        timing_report(i, time()-time_start, tr.batch_size, res_dir)
+        print "\t\t| "+ training_report(ce[-1])
     # End of Epoch
     #-------------------------------
+    ####################################################################
+    ####################################################################
+    print "\n%s\n\t End of epoch %d, \n printing some debug info.\n%s" \
+        %('-'*30, epoch, '-'*30)
+    ####################################################################
+    ####################################################################
     # print insp_
     train_ce.append(_avg(ce))
-    # if flag and train_ce[-1][1] < 0.9: 
-        # learning_rate.set_value(float32(0.001))
-        # flag = False
-
     # validate
-    valid_ce.append(test(file_info.valid, use, test_model, batch, drop, tr.rng, epoch, batch_size, x_, y_))
-    #if use.valid2:
-    #    valid2_ce.append(test(file_info.valid2, use, test_model, drop))
-
+    valid_ce.append(test(file_info.valid, use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_))
 
     # save best params
     if valid_ce[-1][1] < 0.25 and valid_ce[-1][1] < best_valid:
-        if use.valid2: save_results(train_ce, valid_ce, res_dir, valid_ce )
-        else: save_results(train_ce, valid_ce, res_dir)
+        save_results(train_ce, valid_ce, res_dir)
         if not tr.moved: move_results(res_dir)
 
     if valid_ce[-1][1] < best_valid:
         best_valid = valid_ce[-1][1]
 
-    # report
-    if use.valid2: epoch_report(epoch, best_valid, time()-time_start, learning_rate.get_value(borrow=True), \
-        train_ce[-1], valid_ce[-1], res_dir, valid2_ce[-1])
-    else: epoch_report(epoch, best_valid, time()-time_start, learning_rate.get_value(borrow=True),\
+    # epoch report
+    epoch_report(epoch, best_valid, time()-time_start, learning_rate.get_value(borrow=True),\
         train_ce[-1], valid_ce[-1], res_dir)
     # make_plot(train_ce, valid_ce)
 
@@ -367,7 +363,7 @@ for epoch in xrange(tr.n_epochs):
         # learning_rate.set_value(float32(3e-4))
     # else:
         # learning_rate.set_value(float32(learning_rate.get_value(borrow=True)*lr.decay))
-    rng.shuffle(file_info.train)
+    tr.rng.shuffle(file_info.train)
 
 #if use.aug: 
 #    for job in jobs: job.join()

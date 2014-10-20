@@ -39,8 +39,8 @@ def ndtensor(n): return TensorType(floatX, (False,)*n) # n-dimensional tensor
 def load_data(path, rng, epoch, batch_size, x_,y_): 
     """ load data into shared variables """
     #global x_,t_,y_,
-    global first_report2 
-    first_report2 = True
+    #global first_report2 
+    #first_report2 = True
     start_time = time()
     v,p,skeleton_feature,l = load_gzip(path)
     v = v[:,:,:res_shape[2]]
@@ -74,10 +74,11 @@ def load_data(path, rng, epoch, batch_size, x_,y_):
 
     vid, lbl = v_new,l
 
-    if epoch==0: print "get in",str(time()-start_time)[:3]+"s",
+    #if epoch==0: print "get in",str(time()-start_time)[:3]+"s",
     # shuffle data
     ind = rng.permutation(l.shape[0])
-    ind = ind[: l.shape[0]-l.shape[0]%batch_size]
+    ind = ind[:batch_size]
+    vid = vid[:,:,:,:4,:,:]
     vid, skeleton_feature, lbl = vid[ind].astype(floatX), skeleton_feature[ind].astype(floatX),lbl[ind].astype(floatX)
     #vid, skeleton_feature, lbl = vid.astype(floatX), skeleton_feature.astype(floatX),lbl.astype(floatX)
 
@@ -88,11 +89,11 @@ def load_data(path, rng, epoch, batch_size, x_,y_):
     # Wudi already made labels start from 0
     #lbl -= 1 
 
-    if first_report2:
-        print "data range:",vid.min(),vid.max()
-        print "traj range:",skeleton_feature.min(),skeleton_feature.max()
-        print "lbl range:",lbl.min(),lbl.max()
-        first_report2 = False
+    #if first_report2:
+    #    print "data range:",vid.min(),vid.max()
+    #    print "traj range:",skeleton_feature.min(),skeleton_feature.max()
+    #    print "lbl range:",lbl.min(),lbl.max()
+    #    first_report2 = False
 
     # set value
     x_.set_value(vid, borrow=True)
@@ -136,11 +137,11 @@ def conv_args(stage, i, batch, net, use, rng, video_shapes):
 
 def var_norm(_x,imgs=True,axis=[-3,-2,-1]):
     if imgs:
-        return (_x-T.mean(_x,axis=axis,keepdims=True))/T.maximum(1e-4,T.std(_x,axis=axis,keepdims=True))
-    return (_x-T.mean(_x))/T.maximum(1e-4,T.std(_x))
+        return (_x-T.mean(_x,axis=axis,keepdims=True))/T.maximum(1e-4,T.sqrt(T.var(_x,axis=axis,keepdims=True) + 1e-9) )
+    return (_x-T.mean(_x))/T.maximum(1e-4,T.sqrt(T.var(_x,axis=axis,keepdims=True) + 1e-9) )
 
 def std_norm(_x,axis=[-3,-2,-1]):
-    return _x/T.maximum(1e-4,T.std(_x,axis=axis,keepdims=True))
+    return _x/T.maximum(1e-4,T.sqrt(T.var(_x,axis=axis,keepdims=True) + 1e-9))                  
 
 def pool_time(X,shape):
     shape_o = shape
@@ -200,9 +201,9 @@ def _batch(model, batch_size, batch, is_train=True, apply_updates=None):
     return _avg(ce)
 
 
-def timing_report(train_time, batch_size, res_dir):
+def timing_report(file_num, train_time, batch_size, res_dir):
     global first_report
-    r = "\nTraining: %.2fms / sample\n"% (1000.*train_time/batch_size,) 
+    r = "Training: No.%d file, %d s"% (file_num, train_time) 
     first_report = False
     write(r, res_dir)
 
