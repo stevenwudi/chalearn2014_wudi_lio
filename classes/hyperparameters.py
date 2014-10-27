@@ -56,7 +56,7 @@ class mom:
 
 # training
 class tr:
-    n_epochs = 1000 # number of epochs to train
+    n_epochs = 100 # number of epochs to train
     patience = 1 # number of unimproved epochs before decaying learning rate
     batch_size = 1000 # batchsize
     in_shape = (batch_size,2,2,4,64,64) # (batchsize, gray/depth, body/hands, frames, w, h) input video shapes 

@@ -42,7 +42,7 @@ from functions.train_functions import normalize, _shared, _avg, write, ndtensor,
                                   conv_args, var_norm, std_norm, lin,\
                                   print_params, load_data, _mini_batch, _batch,\
                                   timing_report, training_report, epoch_report, \
-                                  test, save_results, move_results
+                                  test, save_results, move_results, save_params, load_params
 
 ####################################################################
 ####################################################################
@@ -337,12 +337,12 @@ for epoch in xrange(tr.n_epochs):
     valid_ce.append(test(file_info.valid, use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_))
 
     # save best params
-    if valid_ce[-1][1] < 0.25:
-        save_results(train_ce, valid_ce, res_dir)
-        if not tr.moved: move_results(res_dir)
+    if valid_ce[-1][1] < 1:
+        res_dir = save_results(train_ce, valid_ce, res_dir, params)
+        #if not tr.moved: move_results(res_dir)  #Wudi don't understand this
         if valid_ce[-1][1] < best_valid:
-            save_params("best")
-        save_params()
+            save_params(params,res_dir,"best")
+        save_params(params, res_dir)
 
     if valid_ce[-1][1] < best_valid:
         best_valid = valid_ce[-1][1]

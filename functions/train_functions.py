@@ -247,14 +247,14 @@ def test(files_, use, test_model, batch, drop, rng, epoch, batch_size, x_, y_):
     # start_load(files.train,augm=use.aug)
     return _avg(ce)
 
-def save_results(train_ce, valid_ce, res_dir, valid2_ce=None):
+def save_results(train_ce, valid_ce, res_dir, params, valid2_ce=None):
     dst = res_dir.split("/")
     if dst[-1].find("%")>=0:
         d = dst[-1].split("%")
         d[0] = str(valid_ce[-1][1]*100)[:4]
         dst[-1] = string.join(d,"%")
     else:
-        dst[-1] = str(valid_ce[-1][1]*100)[:4]+"% "+dst[-1]
+        dst[-1] = str(valid_ce[-1][1]*100)[:4]+"%"+dst[-1]
     dst = string.join(dst,"/") 
     shutil.move(res_dir, dst)
     res_dir = dst
@@ -265,6 +265,7 @@ def save_results(train_ce, valid_ce, res_dir, valid2_ce=None):
     else: ce = (train_ce, valid_ce)
     with open(res_dir+"/cost_error.txt","wb") as f: f.write(str(ce)+"\n")
     dump(ce, open(res_dir+"/cost_error.p", "wb"), -1)
+    return res_dir
 
 def move_results(res_dir):
     global moved
@@ -281,10 +282,10 @@ def move_results(res_dir):
         shutil.copy(file_aug, res_dir)
     except: pass
 
-def save_params(s=""):
+def save_params(params, res_dir, s=""):
     # global res_dir
     if s=="": file = GzipFile("params.zip", 'wb')
-    else: file = GzipFile(res_dir+"/params"+s+".zip", 'wb')
+    else: file = GzipFile(res_dir+"//params_"+s+".zip", 'wb')
     dump(params, file, -1)
     file.close()
 
