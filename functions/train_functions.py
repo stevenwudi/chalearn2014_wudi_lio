@@ -280,3 +280,20 @@ def move_results(res_dir):
         file_aug = "data_aug.py"
         shutil.copy(file_aug, res_dir)
     except: pass
+
+def save_params(s=""):
+    # global res_dir
+    if s=="": file = GzipFile("params.zip", 'wb')
+    else: file = GzipFile(res_dir+"/params"+s+".zip", 'wb')
+    dump(params, file, -1)
+    file.close()
+
+def load_params():
+    global load_params_pos
+    file = GzipFile("params.zip", "rb")
+    par = load(file)
+    file.close()
+    W = par[load_params_pos]
+    b = par[load_params_pos+1]
+    load_params_pos +=2
+    return W,b

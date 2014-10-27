@@ -337,9 +337,12 @@ for epoch in xrange(tr.n_epochs):
     valid_ce.append(test(file_info.valid, use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_))
 
     # save best params
-    if valid_ce[-1][1] < 0.25 and valid_ce[-1][1] < best_valid:
+    if valid_ce[-1][1] < 0.25:
         save_results(train_ce, valid_ce, res_dir)
         if not tr.moved: move_results(res_dir)
+        if valid_ce[-1][1] < best_valid:
+            save_params("best")
+        save_params()
 
     if valid_ce[-1][1] < best_valid:
         best_valid = valid_ce[-1][1]

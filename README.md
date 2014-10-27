@@ -24,7 +24,9 @@ To Lio:
 To train the network, you first need to run and change the following code:
 
 (1) Step1_preproc.py:
+
 Note I used first 650 examples for training and 50 for validation with 1000 frames per storage. (line 85-91)
+
 change input directory: line 37: raise NotImplementedError("TODO: implement this function.")-->set to  data = r"I:\Kaggle_multimodal\Training"
 change destination directory:  lin 87-90: dest = r"I:\Kaggle_multimodal\Training_prepro\train_wudi" # dir to  destination processed data
 
