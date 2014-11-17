@@ -18,6 +18,7 @@ $RECYCLE.BIN/
 # Operating System Files
 # =========================
 
+*.zip
 # OSX
 # =========================
 

@@ -34,7 +34,7 @@ pc = "wudi"
 if pc=="wudi":
     data = r"I:\Kaggle_multimodal\Training" # dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
-    raise NotImplementedError("TODO: implement this function.")
+    data = r"/media/lio/Elements/chalearn/trainingset"
 
 
 # global variable definition
@@ -78,16 +78,23 @@ def main():
     #samples.sort()
     print len(samples), "samples found"
     #start preprocessing
-    preprocess(samples, "validation")
+    preprocess(samples, "training")
 
 def preprocess(samples, set="training"):
     for file_count, file in enumerate(samples):
         if (set=="training"):
             condition = (file_count < 650)
-            dest = r"I:\Kaggle_multimodal\Training_prepro\train_wudi" # dir to  destination processed data
+            if pc=="wudi":
+                dest = r"I:\Kaggle_multimodal\Training_prepro\train_wudi" # dir to  destination processed data
+            elif pc=="lio":
+                dest = r"/media/lio/Elements/chalearn/preproc/train" 
         else:
             condition = (file_count >= 650)
-            dest = r"I:\Kaggle_multimodal\Training_prepro\valid_wudi" # dir to  destination processed data
+            if pc=="wudi":
+                dest = r"I:\Kaggle_multimodal\Training_prepro\valid_wudi" # dir to  destination processed data
+            elif pc=="lio":
+                dest = r"/media/lio/Elements/chalearn/preproc/valid" # dir to  destination processed data
+            
         #set == "training" ? (condition = (file_count<650)) : (condition = (file_count>=650))
         if condition:   #wudi only used first 650 for validation !!! Lio be careful!
             print("\t Processing file " + file)

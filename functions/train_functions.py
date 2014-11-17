@@ -18,6 +18,8 @@ import theano.tensor as T
 from theano.tensor import TensorType
 from theano import config, shared
 floatX = config.floatX
+
+
 #  helper functions
 # ------------------------------------------------------------------------------
 def normalize(input,newmin=-1,newmax=1):
@@ -35,6 +37,9 @@ def write(_s, res_dir):
     print _s
 
 def ndtensor(n): return TensorType(floatX, (False,)*n) # n-dimensional tensor
+
+
+
 
 def load_data(path, rng, epoch, batch_size, x_,y_): 
     """ load data into shared variables """
@@ -101,13 +106,13 @@ def load_data(path, rng, epoch, batch_size, x_,y_):
     y_.set_value(lbl, borrow=True)
 
 
-def load_params():
-    global load_params_pos
-    par = load(open("params.p", "rb"))
-    W = par[load_params_pos]
-    b = par[load_params_pos+1]
-    load_params_pos +=2
-    return W,b
+# def load_params():
+#     global load_params_pos
+#     par = load(open("params.p", "rb"))
+#     W = par[load_params_pos]
+#     b = par[load_params_pos+1]
+#     load_params_pos +=2
+#     return W,b
 
 
 
@@ -131,7 +136,7 @@ def conv_args(stage, i, batch, net, use, rng, video_shapes):
         print "sharing weights!"
         args["W"], args["b"] = layers[-1].params # shared weights
     elif use.load:
-        args["W"], args["b"] = load_params(stage, i) # load stored parameters
+        args["W"], args["b"] = load_params(use) # load stored parameters
     return args
 
 
@@ -205,7 +210,8 @@ def timing_report(file_num, train_time, batch_size, res_dir):
     global first_report
     r = "Training: No.%d file, %d s"% (file_num, train_time) 
     first_report = False
-    write(r, res_dir)
+    # write(r, res_dir)
+    print "%ds"%(train_time),
 
 def training_report(train_ce):
     return "%5.3f %5.2f" % (train_ce[0], train_ce[1]*100.)
@@ -247,14 +253,42 @@ def test(files_, use, test_model, batch, drop, rng, epoch, batch_size, x_, y_):
     # start_load(files.train,augm=use.aug)
     return _avg(ce)
 
-def save_results(train_ce, valid_ce, res_dir, params, valid2_ce=None):
+
+def test_lio(files_, use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, loader):
+    global jobs
+    if use.drop: # dont use dropout when testing
+        #drop.p_traj.set_value(float32(0.)) 
+        drop.p_vid.set_value(float32(0.)) 
+        drop.p_hidden.set_value(float32(0.)) 
+    ce = []
+    first_test_file = True
+    for i in range(loader.n_iter_valid):
+        if first_test_file:
+            augm = False
+            first_test_file = False
+        else: augm = True
+        # load_data(file, rng, epoch, batch_size, x_, y_)
+        loader.next_valid_batch(x_, y_)
+        #load_data(file,  rng, epoch)
+        ce.append(_batch(test_model, batch_size, batch, is_train=False))
+    if use.drop: # reset dropout
+        #drop.p_traj.set_value(drop.p_traj_val) 
+        drop.p_vid.set_value(drop.p_vid_val) 
+        drop.p_hidden.set_value(drop.p_hidden_val)
+    # start_load(files.train,augm=use.aug)
+    return _avg(ce)
+
+
+def save_results(train_ce, valid_ce, res_dir, valid2_ce=None, params=None):
+    if len(valid_ce)==0: rate = 0
+    else: rate = valid_ce[-1][1]
     dst = res_dir.split("/")
     if dst[-1].find("%")>=0:
         d = dst[-1].split("%")
-        d[0] = str(valid_ce[-1][1]*100)[:4]
+        d[0] = str(rate*100)[:4]
         dst[-1] = string.join(d,"%")
     else:
-        dst[-1] = str(valid_ce[-1][1]*100)[:4]+"%"+dst[-1]
+        dst[-1] = str(rate*100)[:4]+"% "+dst[-1]
     dst = string.join(dst,"/") 
     shutil.move(res_dir, dst)
     res_dir = dst
@@ -281,20 +315,28 @@ def move_results(res_dir):
         file_aug = "data_aug.py"
         shutil.copy(file_aug, res_dir)
     except: pass
+    return res_dir
 
 def save_params(params, res_dir, s=""):
     # global res_dir
-    if s=="": file = GzipFile("params.zip", 'wb')
-    else: file = GzipFile(res_dir+"//params_"+s+".zip", 'wb')
-    dump(params, file, -1)
+    print "Saving params"
+    l = []
+    for p in params:
+        l.append(p.get_value(borrow=True))
+    if s=="": file = GzipFile(res_dir+"/params.zip", 'wb')
+    else: file = GzipFile(res_dir+"/params"+s+".zip", 'wb')
+    dump(l, file, -1)
     file.close()
 
-def load_params():
-    global load_params_pos
-    file = GzipFile("params.zip", "rb")
+def load_params(use):
+    import os
+    if os.path.isfile('paramsbest.zip'):
+        file = GzipFile("paramsbest.zip", "rb")
+    else:
+        file = GzipFile("params.zip", "rb")
     par = load(file)
     file.close()
-    W = par[load_params_pos]
-    b = par[load_params_pos+1]
-    load_params_pos +=2
+    W = par[use.load_params_pos]
+    b = par[use.load_params_pos+1]
+    use.load_params_pos +=2
     return W,b

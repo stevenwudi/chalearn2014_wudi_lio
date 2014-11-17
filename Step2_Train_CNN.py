@@ -37,12 +37,12 @@ from convnet3d import ConvLayer, NormLayer, PoolLayer, LogRegr, HiddenLayer, \
 
 # wudi's modular imports
 # the hyperparameter set the data dir, use etc classes, it's important to modify it according to your need
-from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop, net , files
+from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop, net , files,  DataLoader
 from functions.train_functions import normalize, _shared, _avg, write, ndtensor, \
                                   conv_args, var_norm, std_norm, lin,\
                                   print_params, load_data, _mini_batch, _batch,\
                                   timing_report, training_report, epoch_report, \
-                                  test, save_results, move_results, save_params, load_params
+                                  test, test_lio, save_results, move_results, save_params
 
 ####################################################################
 ####################################################################
@@ -50,8 +50,16 @@ print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 ####################################################################
 ####################################################################
 # source and result directory
-src = r"I:\Kaggle_multimodal\Training_prepro"
-res_dir_ = r"I:\Kaggle_multimodal\result"
+pc = "wudi"
+if pc=="wudi":
+    src = r"I:\Kaggle_multimodal\Training_prepro"
+    res_dir_ = r"I:\Kaggle_multimodal\result"# dir of original data -- note that wudi has decompressed it!!!
+elif pc=="lio":
+    src = "/mnt/wd/chalearn/preproc"
+    res_dir_ = "/home/lpigou/chalearn_wudi/try"
+
+
+
 lt = localtime()
 res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
             +str(lt.tm_mday).zfill(2)+"."+str(lt.tm_hour).zfill(2)+"."\
@@ -118,6 +126,9 @@ write('data: total: %i train: %i valid: %i test: %i' % \
 
 first_report2 = True
 epoch = 0
+
+
+loader = DataLoader(src, tr.batch_size) # Lio changed it to read from HDF5 files
 
 ####################################################################
 ####################################################################
@@ -305,6 +316,11 @@ flag=True
 global insp_
 insp_ = None
 
+res_dir = save_results(train_ce, valid_ce, res_dir, params=params)
+if not tr.moved: res_dir = move_results(res_dir)
+tr.moved = True
+save_params(params, res_dir)
+
 for epoch in xrange(tr.n_epochs):
     ce = []
     print_params(params) 
@@ -313,16 +329,18 @@ for epoch in xrange(tr.n_epochs):
     print "\n%s\n\t epoch %d \n%s"%('-'*30, epoch, '-'*30)
     ####################################################################
     ####################################################################
-    for i,train_file in enumerate(file_info.train):
+    for i in range(loader.n_iter_train):
         time_start = time()
         #load
-        load_data(train_file, tr.rng, epoch, tr.batch_size, x_, y_)
+        # load_data(train_file, tr.rng, epoch, tr.batch_size, x_, y_)
+        loader.next_train_batch(x_, y_)
+        # print "loading time", time()-time_start
         # train
         tr.batch_size = y_.get_value(borrow=True).shape[0]
         ce.append(_batch(train_model, tr.batch_size, batch, True, apply_updates))
        
-        timing_report(i, time()-time_start, tr.batch_size, res_dir)
-        print "\t\t| "+ training_report(ce[-1])
+        if epoch==0: timing_report(i, time()-time_start, tr.batch_size, res_dir)
+        print "\t| "+ training_report(ce[-1])
     # End of Epoch
     #-------------------------------
     ####################################################################
@@ -334,15 +352,16 @@ for epoch in xrange(tr.n_epochs):
     # print insp_
     train_ce.append(_avg(ce))
     # validate
-    valid_ce.append(test(file_info.valid, use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_))
+    valid_ce.append(test_lio(file_info.valid, use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_,loader))
 
     # save best params
-    if valid_ce[-1][1] < 1:
-        res_dir = save_results(train_ce, valid_ce, res_dir, params)
-        #if not tr.moved: move_results(res_dir)  #Wudi don't understand this
-        if valid_ce[-1][1] < best_valid:
-            save_params(params,res_dir,"best")
-        save_params(params, res_dir)
+    # if valid_ce[-1][1] < 0.25:
+    res_dir = save_results(train_ce, valid_ce, res_dir, params=params)
+    if not tr.moved: res_dir = move_results(res_dir)
+
+    if valid_ce[-1][1] < best_valid:
+        save_params(params, res_dir, "best")
+    save_params(params, res_dir)
 
     if valid_ce[-1][1] < best_valid:
         best_valid = valid_ce[-1][1]
