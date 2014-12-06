@@ -40,7 +40,7 @@ class ConvLayer(object):
         del self.self
         
         # init W
-        if W != None: self.W = shared(value=W, borrow=borrow, name=layer_name+'_W') # wudi made it shared
+        if W != None: self.W = shared(array(W, dtype=floatX), borrow=borrow, name=layer_name+'_W') # wudi made it shared
         else: 
             # fan in: filter time x filter height x filter width x input maps
             fan_in = prod(kernel_shape)*n_in_maps
@@ -57,7 +57,7 @@ class ConvLayer(object):
 
         # init bias
         if b != None: 
-            self.b = shared(b, name=layer_name+"_b", borrow=borrow) # wudi made it shared
+            self.b = shared(array(b, dtype=floatX), name=layer_name+"_b", borrow=borrow) # wudi made it shared
         elif activation in (relu,softplus): 
             # print b_scale
             b_val = (ones((n_out_maps,), dtype=floatX)*b_scale).astype(floatX)

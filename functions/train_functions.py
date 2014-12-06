@@ -337,6 +337,13 @@ def load_params(use):
     par = load(file)
     file.close()
     W = par[use.load_params_pos]
+    
+    if not use.fast_conv:
+        # we need to flip here because the best parameter by
+        # Lio was using cudaconv, different from Theano's conv op
+        # see: http://benanne.github.io/2014/04/03/faster-convolutions-in-theano.html
+        if len(W.shape) >4:
+            W = W[:, :, :, ::-1, ::-1]
     b = par[use.load_params_pos+1]
     use.load_params_pos +=2
     return W,b

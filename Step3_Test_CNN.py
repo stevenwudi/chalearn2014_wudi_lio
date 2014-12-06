@@ -9,7 +9,7 @@ from functions.train_functions import normalize, _shared, _avg, write, ndtensor,
                                   conv_args, var_norm, std_norm, lin,\
                                   print_params, load_data, _mini_batch, _batch,\
                                   timing_report, training_report, epoch_report, \
-                                  test, test_lio, save_results, move_results, save_params
+                                  test, test_lio, save_results, move_results, save_params, load_params
 
 
 use.load = True  # we load the CNN parameteres here
@@ -90,9 +90,13 @@ out = [out[i].flatten(2) for i in range(len(out))]
 vid_ = T.concatenate(out, axis=1)
 
 # dropout
+
+
 if use.drop: 
     drop.p_vid = shared(float32(drop.p_vid_val) )
     drop.p_hidden = shared(float32(drop.p_hidden_val))
+    drop.p_vid.set_value(float32(0.))  # dont use dropout when testing
+    drop.p_hidden.set_value(float32(0.))  # dont use dropout when testing
     vid_ = DropoutLayer(vid_, rng=tr.rng, p=drop.p_vid).output
 
 # MLP
@@ -101,7 +105,8 @@ if use.drop:
 if net.fusion == "early":
     out = vid_
     # hidden layer
-    layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden, rng=tr.rng, 
+    Wh, bh = load_params(use)  # This is test, wudi added this!
+    layers.append(HiddenLayer(out, W = Wh, b =bh, n_in=n_in_MLP, n_out=net.hidden, rng=tr.rng, 
         W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=relu))
     out = layers[-1].output
 
@@ -111,7 +116,8 @@ else: insp =  T.stack(0,0)
 if use.drop: out = DropoutLayer(out, rng=tr.rng, p=drop.p_hidden).output
 #maxout
 # softmax layer
-layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden, 
+Ws, bs = load_params(use) # This is test, wudi added this!
+layers.append(LogRegr(out, W = Ws, b = bs, rng=tr.rng, activation=lin, n_in=net.hidden, 
     W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
 """
 layers[-1] : softmax layer
@@ -180,9 +186,7 @@ def _batch(model, batch_size, batch, is_train=True, apply_updates=None):
     return _avg(ce)
 
 
-if use.drop: # dont use dropout when testing
-    drop.p_vid.set_value(float32(0.)) 
-    drop.p_hidden.set_value(float32(0.)) 
+
 ce = []
 first_test_file = True
 for i in range(loader.n_iter_valid):
@@ -191,7 +195,8 @@ for i in range(loader.n_iter_valid):
         first_test_file = False
     else: augm = True
     # load_data(file, rng, epoch, batch_size, x_, y_)
-    loader.next_valid_batch(x_, y_)
+    loader.next_train_batch(x_, y_)
     #load_data(file,  rng, epoch)
     ce.append(_batch(test_model, tr.batch_size, batch, is_train=False))
+    print ce
 

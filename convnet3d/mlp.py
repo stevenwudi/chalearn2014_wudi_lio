@@ -24,7 +24,7 @@ class LogRegr(object):
         W=None, b=None, borrow=True, b_scale=0.1,W_scale=0.01):
 
         # Weigth matrix W
-        if W != None: self.W = W
+        if W != None: self.W = shared(W, name=layer_name+"_W",borrow=borrow)
         # elif activation in (relu,softplus): 
         #     W_val = _asarray(rng.normal(loc=0, scale=W_scale, size=(n_in, n_out)),
         #                      dtype=floatX)
@@ -35,7 +35,7 @@ class LogRegr(object):
                 borrow=borrow)
 
         # Bias vector
-        if b!=None: self.b = b
+        if b!=None: self.b = shared(b, name=layer_name+"_b",borrow=borrow)
         # elif activation in (relu,softplus): 
         #     b_val = (ones((n_out,))*b_scale).astype(floatX)
         #     self.b = shared(b_val, name=layer_name+"_b", borrow=borrow)
@@ -67,7 +67,7 @@ class HiddenLayer(object):
     def __init__(self, input, n_in, n_out, activation, rng=RandomState(1234), 
         layer_name="HiddenLayer", W=None, b=None, borrow=True, b_scale=0.1,W_scale=0.01):
 
-        if W!=None: self.W = W
+        if W!=None: self.W = shared(value=W, borrow=borrow, name=layer_name+'_Wu')
         elif activation in (tanh,sigmoid): 
             print "tanh"
             # uniformly sampled W
@@ -85,7 +85,7 @@ class HiddenLayer(object):
             self.W = shared(W_val, name=layer_name+"_W", borrow=borrow)    
             
 
-        if b != None: self.b = b
+        if b != None: self.b = shared(b, name=layer_name+"_b",borrow=borrow)
         elif activation in (relu,softplus): 
             b_val = (ones((n_out,))*b_scale).astype(floatX)
             self.b = shared(b_val, name=layer_name+"_b",borrow=borrow)
