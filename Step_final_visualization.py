@@ -13,6 +13,7 @@ options = {0: gray_body_conv1,
 
            100: plot_confusion_matrix,
            200: plot_cnn_error_rate,
+           201: plot_sk_error_rate,
            }
 
 #options[0]()
@@ -22,3 +23,5 @@ options = {0: gray_body_conv1,
 #options[10]()
 
 options[200]()
+
+options[201]()

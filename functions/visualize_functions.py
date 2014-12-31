@@ -284,15 +284,44 @@ def plot_cnn_error_rate():
         30.402,  30.038,  31.202,  30.084,  30.167,  29.523,  29.316,
         28.953,  29.184])
     training_error /= 100
+
+    training_cost = numpy.array([ 2.241,  1.78 ,  1.612,  1.505,  1.434,  1.36 ,  1.306,  1.248,
+        1.209,  1.184,  1.154,  1.118,  1.08 ,  1.059,  1.029,  1.008,
+        0.982,  0.956,  0.954,  0.943,  0.92 ,  0.908,  0.893,  0.899,
+        0.889,  0.915,  0.887,  0.866,  0.846,  0.843,  0.83 ,  0.824,
+        0.829,  0.828,  0.809,  0.807,  0.797,  0.834,  0.801,  0.802,
+        0.784,  0.776,  0.766,  0.775])
     import matplotlib.pyplot as plt
-
-
+    import matplotlib
+    matplotlib.rc('xtick', labelsize=20) 
+    matplotlib.rc('ytick', labelsize=20) 
     plt.clf()
     plt.plot(range(validation_error.shape[-1]), validation_error, color='c',linewidth=2.0, label="validation error")
-    plt.plot(range(training_error.shape[-1]), training_error, color='r',linewidth=2.0, label="training error")
-    plt.legend()
-    plt.ylabel('frame error rate')
-    plt.xlabel('epochs')
+    plt.plot(range(training_error.shape[-1]), training_error, color='r',linewidth=2.0, label="training error" )
+    #plt.plot(range(training_cost.shape[-1]), training_cost, color='r',linewidth=2.0, label="training cost: negative loglikelihood")
+    plt.legend(prop={'size':20})
+    plt.ylabel('frame error rate',  fontsize=20)
+    plt.xlabel('epochs',  fontsize=20)
     from pylab import savefig
-    savefig(_save_path+'.eps', format='eps', bbox_inches='tight')
+    savefig(_save_path, format='eps', bbox_inches='tight')
+    plt.show()
+
+def plot_sk_error_rate():
+    import numpy
+    _save_path = r'visualization\\training_error_sk.eps'
+    validation_error = numpy.load('result\\validation_loss.npy')
+    training_error = numpy.load('result\\minibatch_avg_cost_train.npy')
+
+    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.rc('xtick', labelsize=20) 
+    matplotlib.rc('ytick', labelsize=20)
+    plt.clf()
+    plt.plot(range(validation_error.shape[-1]), validation_error, color='c',linewidth=2.0, label="validation error")
+    #plt.plot(range(training_error.shape[-1]), training_error, color='r',linewidth=2.0, label="training cost: negative loglikelihood")
+    plt.legend(prop={'size':20})
+    plt.ylabel('frame error rate', fontsize=20)
+    plt.xlabel('epochs', fontsize=20)
+    from pylab import savefig
+    savefig(_save_path, format='eps', bbox_inches='tight')
     plt.show()
