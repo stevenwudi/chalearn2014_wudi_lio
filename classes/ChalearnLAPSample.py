@@ -16,7 +16,8 @@ import csv
 from PIL import Image, ImageDraw
 from scipy.misc import imresize
 import numpy
-
+from functions.preproc_functions import *
+from scipy import misc
 
 class Skeleton(object):
     """ Class that represents the skeleton information """
@@ -817,7 +818,92 @@ class GestureSample(object):
         if count_nonzero(u)<10: corrupt = True
         return s,d,g,u, corrupt
 
+    def get_test_data_wudi_lio(self, vid_res = (480, 640), cuboid_length=4, step=1):
+        skelet_original = []
+        n_f = self.getNumFrames()
+        #n_f = 20  # Need to change here!
+        start,end = 1, n_f 
+        depth,user,gray = [empty((n_f,)+vid_res, "uint8") for _ in range(3)]
 
+        for i,framenum in enumerate(range(start,end+1)): # Lio forgot the last frame!
+            skelet_original.append(self.getSkeleton(framenum))
+            depth[i] = self.getDepth(framenum)
+            user[i] = to_grayscale(self.getUser(framenum))
+            gray[i] = to_grayscale(self.getRGB(framenum))
+        
+        user[user<128], user[user>=128] = 0, 1         
+        user_o = user.copy()     
+        user = proc_user(user) 
+        skelet, c = proc_skelet(skelet_original)
+        user_new, depth,c = proc_depth_test_wudi_lio(depth, user, user_o, skelet)
+        gray,c = proc_gray_test_wudi_lio(gray, user,  skelet)
+        #traj2D,traj3D,ori,pheight,hand,center = skelet
+        #skelet = traj3D,ori,pheight
+        video = empty((2,)+gray.shape,dtype="uint8")
+        video[0],video[1] = gray,depth
+        #label start from 0 REMEMBER!!!
+        video = video.swapaxes(0,2)
+        video = video.swapaxes(1,2)
+
+        #show_gray = True
+        #show_depth = True
+        #if True: 
+        #    Targets = zeros(shape=(depth.shape[1], 101))
+        #    Targets[0,:]=1
+        #if show_depth: play_vid_wudi(depth, Targets,  wait=1000/10, norm=False)
+        #if show_gray: play_vid_wudi(gray, Targets,  wait=1000/10, norm=False)
+
+        cur_fr = 1
+        pheight = []
+        while cur_fr+cuboid_length-1<n_f+1:            
+            sn=[]
+            for i,fr in enumerate(range(cur_fr,cur_fr+cuboid_length)):
+                sn.append(self.getSkeleton(fr))
+            skelet_current,c = proc_skelet(sn,_3D=False)
+            pheight.append(skelet_current[3])
+            cur_fr += step
+       
+        p = numpy.asarray(pheight)     
+        ratio = 0.25
+        res_shape=[100,2,2,4,64,64]
+        res_shape[0] = video.shape[0]
+        v_new = empty(res_shape,dtype="uint8")
+        h = res_shape[-1]
+
+        for i in xrange(video.shape[0]): 
+            if p[i] < 10: p[i] = 100
+            ofs = p[i]*ratio
+            mid =  video.shape[-1]/2.
+            sli = None
+            if ofs < mid:
+                start = int(round(mid-ofs))
+                end = int(round(mid+ofs))
+                sli = slice(start,end)
+
+            for j in xrange(video.shape[2]): #maps
+                for k in xrange(video.shape[3]): #frames
+                    #body
+                    img = video[i,0,j,k]
+                    img = cut_img(img,5)
+                    img = misc.imresize(img,(h,h))
+                    # if j==0: img = 255-misc.imfilter(img,"contour")
+                    v_new[i,0,j,k] = img
+
+                    #hand
+                    img = video[i,1,j,k]
+                    img = img[sli,sli]
+                    img = misc.imresize(img,(h,h))
+                    v_new[i,1,j,k] = img
+        #if True: 
+        #    Targets = zeros(shape=(v_new.shape[0], 101))
+        #    Targets[0,:]=1
+        #    depth = v_new[:,0,:,:,:]
+        #    depth = depth.swapaxes(1,0)
+        #    gray = v_new[:,1,:,:,:]
+        #    gray = gray.swapaxes(1,0)
+        #    play_vid_wudi(depth, Targets,  wait=1000/10, norm=False)
+        #    play_vid_wudi(gray, Targets,  wait=1000/10, norm=False)
+        return v_new
 
 
 class ActionSample(object):

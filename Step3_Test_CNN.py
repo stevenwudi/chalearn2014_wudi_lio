@@ -27,7 +27,7 @@ elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc"
     res_dir_ = "/home/lpigou/chalearn_wudi/try"
 
-file_info = files(src)
+
 loader = DataLoader(src, tr.batch_size) # Lio changed it to read from HDF5 files
 
 ####################################################################
@@ -90,8 +90,6 @@ out = [out[i].flatten(2) for i in range(len(out))]
 vid_ = T.concatenate(out, axis=1)
 
 # dropout
-
-
 if use.drop: 
     drop.p_vid = shared(float32(drop.p_vid_val) )
     drop.p_hidden = shared(float32(drop.p_hidden_val))

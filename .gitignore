@@ -48,3 +48,14 @@ Temporary Items
 *.pyproj
 *.sln
 *.suo
+
+*.eps
+*.jpg
+
+
+#=====================================
+#prediction result
+#+=======================
+
+*.csv
+*.png

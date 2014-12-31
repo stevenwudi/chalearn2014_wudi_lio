@@ -16,8 +16,83 @@ from numpy import *
 from numpy import linalg
 from numpy.random import RandomState
 
+def to_grayscale(v):
+    s = v.shape
+    v = v.reshape(prod(s[:-2]),s[-2], s[-1])
+    v = cv2.cvtColor(v,cv2.cv.CV_RGB2GRAY)
+    return v.reshape(s[:-1])
+
+def cut_img(img,s):
+    if s==0: return img 
+    return img[s:-s,s:-s]
 
 def proc_skelet_wudi(gestures, used_joints, gesture, STATE_NO=5, NEUTRUAL_SEG_LENGTH=8):
+    """
+    Extract original features, including the neutral features
+    """
+    startFrame = gesture[1]
+    endFrame = gesture[2]
+    Pose, corrupt = Extract_feature_UNnormalized(gestures, used_joints, startFrame, endFrame)           
+ 
+    #####################################################################
+    # Articulated poses extraction
+    #####################################################################
+    """
+    Feature design: (1) relational pairwise (2) velocity (3) acceleration
+    Reference:
+    The Moving Pose: An Efficient 3D Kinematics Descriptor for Low-Latency Action Recognition and Detection
+    ICCV 2013
+    """
+    njoints = len(used_joints)
+    Feature_gesture = Extract_feature_Accelerate(Pose, njoints)      
+    #label information
+    gestureID = gesture[0]
+    Targets_gesture = numpy.zeros( shape=(Feature_gesture.shape[0], STATE_NO*20+1))
+    fr_no = Feature_gesture.shape[0]
+    count = 0
+    for i in range(STATE_NO):  #HMM states force alignment
+        begin_fr = numpy.round(fr_no* i /STATE_NO) + 1
+        end_fr = numpy.round( fr_no*(i+1) /STATE_NO) 
+        #print "begin: %d, end: %d"%(begin_fr-1, end_fr)
+        seg_length=end_fr-begin_fr + 1
+        targets = numpy.zeros( shape =(STATE_NO*20+1,1))
+        targets[ i + STATE_NO*(gestureID-1)] = 1
+        begin_frame = count
+        end_frame = count+seg_length
+        Targets_gesture[begin_frame:end_frame, :]= numpy.tile(targets.T,(seg_length, 1))
+        count=count+seg_length
+
+    #####################################################################
+    # Articulated poses extraction--neutral Poses
+    #####################################################################
+    # pre-allocating the memory
+    Feature_neutral = numpy.zeros(shape=(8, Feature_gesture.shape[1]),dtype=numpy.float32)
+    Targets_neutral = numpy.zeros( shape=(8, STATE_NO*20+1))
+    count = 0
+    if startFrame-NEUTRUAL_SEG_LENGTH-1> 0:
+        Skeleton_matrix, c= Extract_feature_UNnormalized(gestures, used_joints, startFrame-NEUTRUAL_SEG_LENGTH, startFrame-1)              
+        # if corrupt, we don't need it in the main loop
+        Feature = Extract_feature_Accelerate(Skeleton_matrix, njoints)
+        begin_frame = count
+        end_frame = count+NEUTRUAL_SEG_LENGTH-4 # in effect it only generate 4 frames because acceleration requires 5 frames
+        Feature_neutral[begin_frame:end_frame,:] = Feature
+        Targets_neutral[begin_frame:end_frame, -1] = 1
+        count=end_frame
+
+    ## extract last 5 frames
+    if endFrame+NEUTRUAL_SEG_LENGTH+1 < gestures.getNumFrames():
+        Skeleton_matrix, c= Extract_feature_UNnormalized(gestures, used_joints, endFrame+1, endFrame+NEUTRUAL_SEG_LENGTH)              
+        Feature = Extract_feature_Accelerate(Skeleton_matrix, njoints)
+        begin_frame = count
+        end_frame = count+NEUTRUAL_SEG_LENGTH-4 # in effect it only generate 4 frames because acceleration requires 5 frames
+        Feature_neutral[begin_frame:end_frame,:] = Feature
+        Targets_neutral[begin_frame:end_frame, -1] = 1
+
+    Feature = numpy.concatenate((Feature_gesture, Feature_neutral), axis=0)
+    Targets = numpy.concatenate((Targets_gesture, Targets_neutral), axis=0)
+    return Feature, Targets, corrupt
+
+
     """
     Extract original features, including the neutral features
     """
@@ -248,10 +323,9 @@ def proc_depth_wudi(depth, user, user_o, skelet, NEUTRUAL_SEG_LENGTH=8, vid_shap
     #stats
     depth = 255 - depth
     user_depth = depth[user_o==1]
-    #import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
     #for f in range(user_o.shape[0]):
-    #    cv2.imshow("user", depth[f,:,:])
-    #    #cv2.namedWindow(
+    #    cv2.imshow("user", user_o[f,:,:])
     #    cv2.waitKey(200)
     #print histogram(user_depth,100)
     # thresh_noise = user_depth.max()
@@ -306,6 +380,73 @@ def proc_depth_wudi(depth, user, user_o, skelet, NEUTRUAL_SEG_LENGTH=8, vid_shap
 
     return new_user, Feature.astype("uint8"), corrupt
 
+def proc_depth_test_wudi_lio(depth, user, user_o, skelet,  vid_shape_hand = (128, 128)):
+    # settings
+    thresh_noise = 200
+    scaler = 4
+    corrupt = False
+    traj2D,traj3D,ori,pheight,hand,center = skelet
+    #stats
+    depth = 255 - depth
+    user_depth = depth[user_o==1]
+
+    #import matplotlib.pyplot as plt
+    #for f in range(user_o.shape[0]):
+    #    cv2.imshow("user", depth[f,:,:])
+    #    cv2.waitKey(200)
+    #print histogram(user_depth,100)
+
+    med = average(user_depth)
+    # med = 255 - med
+    std = user_depth.std()
+
+    depth_b = cut_body(depth.copy(), center, pheight, hand)
+    user_b = cut_body(user.copy(), center, pheight, hand)
+
+    depth_h = cut_hand(depth.copy(), traj2D, hand)
+    user_h = cut_hand(user.copy(), traj2D, hand)
+
+    new_depth = empty((2,)+(user.shape[0], vid_shape_hand[0], vid_shape_hand[1]), dtype="uint8")
+
+    for i,(depth,user) in enumerate(((depth_b,user_b),(depth_h,user_h))):
+        depth[depth>thresh_noise] = 0
+        thresh_depth = med-3*std        
+        # print med-3*std
+        # thresh_depth = 100
+        #depth[depth<thresh_depth] = thresh_depth
+        depth = depth-thresh_depth
+        depth = clip(depth*scaler, 0, 255)
+        # depth = depth - depth.mean()
+        # depth = norm_vid(depth)
+        depth = depth.astype("uint8")
+        depth = medianblur(depth)
+        new_depth[i] = depth
+
+    depth = new_depth
+
+    new_user = empty((2,)+(user.shape[0], vid_shape_hand[0], vid_shape_hand[1]), dtype="uint8")
+    new_user[0] = user_b
+    new_user[1] = user_h
+
+    #cv2.destroyAllWindows()
+    #for f in range(depth.shape[1]):
+    #    cv2.imshow("user", depth[0,f,:,:])
+    #    cv2.waitKey(200)
+    #for f in range(depth.shape[1]):
+    #    cv2.imshow("user", depth[1,f,:,:])
+    #    cv2.waitKey(200)
+
+
+    TOTAL_CUDBOID = depth.shape[1]-3
+    Feature = empty(shape=(depth.shape[0],TOTAL_CUDBOID, 4, depth.shape[2], depth.shape[3]))
+    #gesture cuboid
+    frame_count = 0
+    for frame_no in range( depth.shape[1]-3):
+        Feature[:, frame_no, : , :, :] = depth[:, frame_no:frame_no+4, :, :]
+
+    return new_user, Feature.astype("uint8"), corrupt
+
+
 def proc_gray_wudi(gray, user, skelet, NEUTRUAL_SEG_LENGTH=8, vid_shape_hand = (128, 128)):
     corrupt = False
     traj2D,traj3D,ori,pheight,hand,center = skelet
@@ -333,6 +474,27 @@ def proc_gray_wudi(gray, user, skelet, NEUTRUAL_SEG_LENGTH=8, vid_shape_hand = (
     for frame_no in range(gray.shape[1]-NEUTRUAL_SEG_LENGTH -8 ,gray.shape[1] - 12):
         Feature[:, frame_count, : , :, :] = gray[:, frame_no:frame_no+5, :, :]
         frame_count += 1
+
+    return Feature.astype("uint8"), corrupt
+
+def proc_gray_test_wudi_lio(gray, user, skelet,  vid_shape_hand = (128, 128)):
+    corrupt = False
+    traj2D,traj3D,ori,pheight,hand,center = skelet
+
+    gray_b = cut_body(gray.copy(), center, pheight, hand)
+    gray_h = cut_hand(gray.copy(), traj2D, hand)
+    new_gray = empty((2,)+(user.shape[0], vid_shape_hand[0], vid_shape_hand[1]), dtype="uint8")
+    new_gray[0] = gray_b
+    new_gray[1] = gray_h
+    gray = new_gray
+    # wudi added the following lines to extract 5 continuous frames together
+
+    TOTAL_CUDBOID = gray.shape[1]-3
+    Feature = empty(shape=(gray.shape[0], TOTAL_CUDBOID, 4, gray.shape[2], gray.shape[3]))
+    #gesture cuboid
+    frame_count = 0
+    for frame_no in range( gray.shape[1]-3 ):
+        Feature[:, frame_no, : , :, :] = gray[:, frame_no:frame_no+4, :, :]
 
     return Feature.astype("uint8"), corrupt
 

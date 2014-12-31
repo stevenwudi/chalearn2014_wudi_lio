@@ -145,7 +145,10 @@ for i in xrange(net.n_stages):
     conv_shapes.append(conv_s)
     tr.video_shapes.append(tuple((v-k+1)/p))
     print "stage", i
-    print "  conv",tr.video_shapes[i],"->",conv_s
+    if use.depth and i==0:
+        print "  conv",tr.video_shapes[i],"x 2 ->",conv_s #for body and hand
+    else:
+        print "  conv",tr.video_shapes[i],"->",conv_s
     print "  pool",conv_s,"->",tr.video_shapes[i+1],"x",net.maps[i+1]
 
 # number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size

@@ -43,7 +43,7 @@ store_result = True
 bg_remove = False
 norm_gray = True
 
-show_gray = False
+show_gray = True
 show_depth = False
 show_user = False
 
@@ -141,7 +141,7 @@ def preprocess(samples, set="training"):
                 video[0],video[1] = gray,depth
                 store_preproc_wudi(video, skelet_feature, Targets.argmax(axis=1), skelet, dest)
         if condition and file_count==(len(samples)-1):
-            dump_last_data(video,skelet, Targets.argmax(axis=1), skelet, dest)
+            dump_last_data(video,skelet_feature, Targets.argmax(axis=1), skelet, dest)
             print 'Process',p_i,'finished'
 
 def store_preproc_wudi(video,skelet, label, skelet_info, dest):

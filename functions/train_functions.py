@@ -330,8 +330,11 @@ def save_params(params, res_dir, s=""):
 
 def load_params(use):
     import os
-    if os.path.isfile('paramsbest.zip'):
+    path = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
+    if os.path.isfile('paramsbest.zip'): 
         file = GzipFile("paramsbest.zip", "rb")
+    elif os.path.isfile(path+'\paramsbest.zip'):
+        file = GzipFile(path+"\paramsbest.zip", "rb")
     else:
         file = GzipFile("params.zip", "rb")
     par = load(file)
