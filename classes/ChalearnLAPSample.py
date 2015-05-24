@@ -818,6 +818,59 @@ class GestureSample(object):
         if count_nonzero(u)<10: corrupt = True
         return s,d,g,u, corrupt
 
+
+    def get_data_lstm(self, gesture, vid_res, NEUTRUAL_SEG_LENGTH=8):
+        """ 
+        some neutral frames are included, data collection for lstm
+        """
+        corrupt = False
+        s = []
+        id,start,end = gesture
+        n_f = end - start + 1
+        # wudi added neutral frames
+        TOTAL_FRAME = n_f
+        if start-NEUTRUAL_SEG_LENGTH -1 <= 0:
+            return [],[],[],[], True
+            #TOTAL_FRAME = TOTAL_FRAME + NEUTRUAL_SEG_LENGTH
+        if end+NEUTRUAL_SEG_LENGTH+1 >= self.getNumFrames():
+            return [],[],[],[], True
+            #TOTAL_FRAME = TOTAL_FRAME + NEUTRUAL_SEG_LENGTH
+        TOTAL_FRAME = TOTAL_FRAME + 2*NEUTRUAL_SEG_LENGTH
+        d,u,g = [empty((TOTAL_FRAME,)+vid_res, "uint8") for _ in range(3)]
+
+        for i,framenum in enumerate(range(start,end+1)): # Lio forgot the last frame!
+            s.append(self.getSkeleton(framenum))
+            d[i] = self.getDepth(framenum)
+            u[i] = to_grayscale(self.getUser(framenum))
+            g[i] = to_grayscale(self.getRGB(framenum))
+        
+        gesture_acc = n_f
+        # here we include some neutral frames information
+        #-----------------neutral frames start here---------------------------------------------
+        if start-NEUTRUAL_SEG_LENGTH -1 > 0:
+            for i,framenum in enumerate(range(start-NEUTRUAL_SEG_LENGTH-1,start-1)): # Lio forgot the last frame!
+                s.append(self.getSkeleton(framenum))
+                d[i+gesture_acc] = self.getDepth(framenum)
+                u[i+gesture_acc] = to_grayscale(self.getUser(framenum))
+                g[i+gesture_acc] = to_grayscale(self.getRGB(framenum))
+                #d[i+gesture_acc],u[i+gesture_acc],g[i+gesture_acc] = [v.read()[1] for v in dv,uv,gv]
+    
+        gesture_acc = n_f + NEUTRUAL_SEG_LENGTH 
+        ## extract last 5 frames
+        if end+NEUTRUAL_SEG_LENGTH+1 < self.getNumFrames():
+             for i,framenum in enumerate(range(end+1, end+NEUTRUAL_SEG_LENGTH+1)):
+                s.append(self.getSkeleton(framenum))
+                d[i+gesture_acc] = self.getDepth(framenum)
+                u[i+gesture_acc] = to_grayscale(self.getUser(framenum))
+                g[i+gesture_acc] = to_grayscale(self.getRGB(framenum))
+                #d[i+gesture_acc],u[i+gesture_acc],g[i+gesture_acc] = [v.read()[1] for v in dv,uv,gv]
+        #--------------------neutral frames end here------------------------------------------
+        u[u<128], u[u>=128] = 0, 1
+
+        if count_nonzero(u)<10: corrupt = True
+        return s,d,g,u, corrupt
+
+
     def get_test_data_wudi_lio(self, vid_res = (480, 640), cuboid_length=4, step=1):
         skelet_original = []
         n_f = self.getNumFrames()

@@ -23,6 +23,7 @@ if pc=="wudi":
     cnn_obs_likelihodd_dir = r"I:\Kaggle_multimodal\Precompute_state_matrix"
     sk_obs_likelihood_dir = r"I:\Kaggle_multimodal\SK_threshold"
     outPred=r'C:\Users\PC-User\Documents\GitHub\chalearn2014_wudi_lio\CNN_valid_pred_combine_sk_cnn'
+    outPred = r'C:\Users\PC-User\Documents\GitHub\chalearn2014_wudi_lio\valid_sk_pred'
 elif pc=="lio":
     data = r"/media/lio/Elements/chalearn/trainingset"
 

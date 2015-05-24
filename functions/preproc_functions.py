@@ -93,72 +93,6 @@ def proc_skelet_wudi(gestures, used_joints, gesture, STATE_NO=5, NEUTRUAL_SEG_LE
     return Feature, Targets, corrupt
 
 
-    """
-    Extract original features, including the neutral features
-    """
-    startFrame = gesture[1]
-    endFrame = gesture[2]
-    Pose, corrupt = Extract_feature_UNnormalized(gestures, used_joints, startFrame, endFrame)           
- 
-    #####################################################################
-    # Articulated poses extraction
-    #####################################################################
-    """
-    Feature design: (1) relational pairwise (2) velocity (3) acceleration
-    Reference:
-    The Moving Pose: An Efficient 3D Kinematics Descriptor for Low-Latency Action Recognition and Detection
-    ICCV 2013
-    """
-    njoints = len(used_joints)
-    Feature_gesture = Extract_feature_Accelerate(Pose, njoints)      
-    #label information
-    gestureID = gesture[0]
-    Targets_gesture = numpy.zeros( shape=(Feature_gesture.shape[0], STATE_NO*20+1))
-    fr_no = Feature_gesture.shape[0]
-    count = 0
-    for i in range(STATE_NO):  #HMM states force alignment
-        begin_fr = numpy.round(fr_no* i /STATE_NO) + 1
-        end_fr = numpy.round( fr_no*(i+1) /STATE_NO) 
-        #print "begin: %d, end: %d"%(begin_fr-1, end_fr)
-        seg_length=end_fr-begin_fr + 1
-        targets = numpy.zeros( shape =(STATE_NO*20+1,1))
-        targets[ i + STATE_NO*(gestureID-1)] = 1
-        begin_frame = count
-        end_frame = count+seg_length
-        Targets_gesture[begin_frame:end_frame, :]= numpy.tile(targets.T,(seg_length, 1))
-        count=count+seg_length
-
-    #####################################################################
-    # Articulated poses extraction--neutral Poses
-    #####################################################################
-    # pre-allocating the memory
-    Feature_neutral = numpy.zeros(shape=(8, Feature_gesture.shape[1]),dtype=numpy.float32)
-    Targets_neutral = numpy.zeros( shape=(8, STATE_NO*20+1))
-    count = 0
-    if startFrame-NEUTRUAL_SEG_LENGTH-1> 0:
-        Skeleton_matrix, c= Extract_feature_UNnormalized(gestures, used_joints, startFrame-NEUTRUAL_SEG_LENGTH, startFrame-1)              
-        # if corrupt, we don't need it in the main loop
-        Feature = Extract_feature_Accelerate(Skeleton_matrix, njoints)
-        begin_frame = count
-        end_frame = count+NEUTRUAL_SEG_LENGTH-4 # in effect it only generate 4 frames because acceleration requires 5 frames
-        Feature_neutral[begin_frame:end_frame,:] = Feature
-        Targets_neutral[begin_frame:end_frame, -1] = 1
-        count=end_frame
-
-    ## extract last 5 frames
-    if endFrame+NEUTRUAL_SEG_LENGTH+1 < gestures.getNumFrames():
-        Skeleton_matrix, c= Extract_feature_UNnormalized(gestures, used_joints, endFrame+1, endFrame+NEUTRUAL_SEG_LENGTH)              
-        Feature = Extract_feature_Accelerate(Skeleton_matrix, njoints)
-        begin_frame = count
-        end_frame = count+NEUTRUAL_SEG_LENGTH-4 # in effect it only generate 4 frames because acceleration requires 5 frames
-        Feature_neutral[begin_frame:end_frame,:] = Feature
-        Targets_neutral[begin_frame:end_frame, -1] = 1
-
-    Feature = numpy.concatenate((Feature_gesture, Feature_neutral), axis=0)
-    Targets = numpy.concatenate((Targets_gesture, Targets_neutral), axis=0)
-    return Feature, Targets, corrupt
-
-
 def Extract_feature_UNnormalized(smp, used_joints, startFrame, endFrame):
     """
     Extract original features
@@ -323,7 +257,7 @@ def proc_depth_wudi(depth, user, user_o, skelet, NEUTRUAL_SEG_LENGTH=8, vid_shap
     #stats
     depth = 255 - depth
     user_depth = depth[user_o==1]
-    import matplotlib.pyplot as plt
+    #import matplotlib.pyplot as plt
     #for f in range(user_o.shape[0]):
     #    cv2.imshow("user", user_o[f,:,:])
     #    cv2.waitKey(200)

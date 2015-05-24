@@ -28,7 +28,7 @@ from functions.preproc_functions import *
 #data path and store path definition
 pc = "wudi"
 if pc=="wudi":
-    data = r"D:\Chalearn2014\Data_unzipped" # dir of original data -- note that wudi has decompressed it!!!
+    data = r"I:\Kaggle_multimodal\Training" # dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
     data = r"/media/lio/Elements/chalearn/trainingset"
 
@@ -38,7 +38,7 @@ store_result = True
 bg_remove = False
 norm_gray = True
 
-show_gray = False
+show_gray = True
 show_depth = False
 show_user = False
 
@@ -80,7 +80,7 @@ def preprocess(samples, set="training"):
         if (set=="training"):
             condition = (file_count < 650)
             if pc=="wudi":
-                dest = r"D:\Chalearn2014\Data_processed" # dir to  destination processed data
+                dest = r"I:\Kaggle_multimodal\Training_prepro\train_wudi" # dir to  destination processed data
             elif pc=="lio":
                 dest = r"/media/lio/Elements/chalearn/preproc/train" 
         else:
@@ -102,9 +102,8 @@ def preprocess(samples, set="training"):
             gestures = sample.getGestures()
             # Iterate for each action in this sample
             for gesture in gestures:
-                skelet, depth, gray, user, c = sample.get_data_wudi(gesture, vid_res, NEUTRUAL_SEG_LENGTH)
-                if c: print 'corrupt'; continue
-                     
+                skelet, depth, gray, user, c = sample.get_data_lstm(gesture, vid_res, NEUTRUAL_SEG_LENGTH)
+                if c: print 'corrupt'; continue                     
                 # preprocess
                 # skelet_feature: frames * num_features? here gestures because we need netural frames
                 skelet_feature,Targets, c = proc_skelet_wudi(sample, used_joints, gesture, STATE_NO, NEUTRUAL_SEG_LENGTH)
