@@ -139,6 +139,8 @@ def preprocess(samples, set="training"):
                 video[0],video[1] = gray,depth
                 store_preproc_wudi(video, skelet_feature, Targets.argmax(axis=1), skelet, dest)
 
+        end_time = time.time()
+        print "Processing one batch requires: %d second\n"% ( end_time - start_time)         
         if condition and file_count==(len(samples)-1):
             dump_last_data(video,skelet_feature, Targets.argmax(axis=1), skelet, dest)
             print 'Process',p_i,'finished'
