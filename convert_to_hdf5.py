@@ -7,14 +7,20 @@ from numpy.random import permutation
 
 
 pc = "wudi"
+pc = "wudi_linux"
 if pc=="wudi":
     src = r"I:\Kaggle_multimodal\Training_prepro\\" # dir of original data -- note that wudi has decompressed it!!!
+elif pc=="wudi_linux":
+    src = '/idiap/temp/dwu/chalearn2014_data/Train_processed/
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc/"
 
 
 def main():
     if pc=="wudi":
+        files_train = glob(src+"train_wudi/batch_*.zip")
+        files_valid = glob(src+"valid_wudi/batch_*.zip")
+    elif pc=="wudi_linux":
         files_train = glob(src+"train_wudi/batch_*.zip")
         files_valid = glob(src+"valid_wudi/batch_*.zip")
     elif pc=="lio":
