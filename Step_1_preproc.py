@@ -21,6 +21,8 @@ from numpy import *
 from numpy import linalg
 from numpy.random import RandomState
 
+#timing
+import time
 #local import
 from classes import GestureSample
 from functions.preproc_functions import *
@@ -93,6 +95,7 @@ def preprocess(samples, set="training"):
         #set == "training" ? (condition = (file_count<650)) : (condition = (file_count>=650))
         if condition:   #wudi only used first 650 for validation !!! Lio be careful!
             print("\t Processing file " + file)
+            start_time = time.time()
             # Create the object to access the sample
             sample = GestureSample(os.path.join(data,file))
             # ###############################################
@@ -135,6 +138,7 @@ def preprocess(samples, set="training"):
                 video = empty((2,)+gray.shape,dtype="uint8")
                 video[0],video[1] = gray,depth
                 store_preproc_wudi(video, skelet_feature, Targets.argmax(axis=1), skelet, dest)
+
         if condition and file_count==(len(samples)-1):
             dump_last_data(video,skelet_feature, Targets.argmax(axis=1), skelet, dest)
             print 'Process',p_i,'finished'

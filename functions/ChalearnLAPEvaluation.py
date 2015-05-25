@@ -127,12 +127,7 @@ def exportGT_Gesture(dataPath, outputPath):
     if not os.path.exists(dataPath) or not os.path.isdir(dataPath):
         raise Exception("Data path does not exist: " + dataPath)
 
-    # Check the output path
-    if os.path.exists(outputPath) and os.path.isdir(outputPath):
-        raise Exception("Output path already exists. Remove it before start: " + outputPath)
 
-    # Create the output path
-    os.makedirs(outputPath)
     if not os.path.exists(outputPath) or not os.path.isdir(outputPath):
         raise Exception("Cannot create the output path: " + outputPath)
 
@@ -143,50 +138,22 @@ def exportGT_Gesture(dataPath, outputPath):
     for sample in samplesList:
         # Build paths for sample
         sampleFile = os.path.join(dataPath, sample)
-        # Check that is a ZIP file
-        if not os.path.isfile(sampleFile) or not sample.lower().endswith(".zip"):
-            continue
 
         # Prepare sample information
         file = os.path.split(sampleFile)[1]
-        sampleID = os.path.splitext(file)[0]
+        #sampleID = os.path.splitext(file)[0]
+        sampleID = file[:10]
         samplePath = dataPath + os.path.sep + sampleID
 
-        # Unzip sample if it is necessary
-        if os.path.isdir(samplePath):
-            unziped = False
-        else:
-            unziped = True
-            zipFile = zipfile.ZipFile(sampleFile, "r")
-            zipFile.extractall(samplePath)
-
         # Copy labels file
-        sampleDataPath = samplePath + os.path.sep + sampleID + '_data.csv'
-        if not os.path.exists(sampleDataPath):
-            raise Exception("Invalid sample file. Sample data is not available")
-        shutil.copyfile(sampleDataPath, outputPath + sampleID + '_data.csv')
+        sampleDataPath = samplePath  + '_data.csv'
+        #if not os.path.exists(sampleDataPath):
+        #    raise Exception("Invalid sample file. Sample data is not available")
+        shutil.copyfile(sampleDataPath, outputPath + os.path.sep + sampleID  + os.path.sep + sampleID +'_data.csv')
 
-        # Copy Data file
-        srcSampleDataPath = samplePath + os.path.sep + sampleID + '_data.csv'
-        dstSampleDataPath = outputPath + os.path.sep + sampleID + '_data.csv'
-        if not os.path.exists(srcSampleDataPath) or not os.path.isfile(srcSampleDataPath):
-            raise Exception("Invalid sample file. Sample data is not available")
-        shutil.copyfile(srcSampleDataPath, dstSampleDataPath)
-        if not os.path.exists(dstSampleDataPath) or not os.path.isfile(dstSampleDataPath):
-            raise Exception("Cannot copy data file: " + srcSampleDataPath + "->" + dstSampleDataPath)
-
-        # Copy labels file
-        srcSampleLabelsPath = samplePath + os.path.sep + sampleID + '_labels.csv'
-        dstSampleLabelsPath = outputPath + os.path.sep + sampleID + '_labels.csv'
-        if not os.path.exists(srcSampleLabelsPath) or not os.path.isfile(srcSampleLabelsPath):
-            raise Exception("Invalid sample file. Sample labels is not available")
-        shutil.copyfile(srcSampleLabelsPath, dstSampleLabelsPath)
-        if not os.path.exists(dstSampleLabelsPath) or not os.path.isfile(dstSampleLabelsPath):
-            raise Exception("Cannot copy labels file: " + srcSampleLabelsPath + "->" + dstSampleLabelsPath)
-
-        # Remove temporal data
-        if unziped:
-            shutil.rmtree(samplePath)
+        srcSampleLabelsPath = samplePath +  '_labels.csv'
+        shutil.copyfile(srcSampleLabelsPath, outputPath + os.path.sep + sampleID + os.path.sep + sampleID + '_labels.csv')
+       
 
 
 def exportGT_Action(dataPath,outputPath):
