@@ -5,6 +5,11 @@ from glob import glob
 from scipy import misc
 from numpy.random import permutation
 
+import cv2
+
+raw_input("Press Enter to continue...")
+
+
 
 pc = "wudi"
 #pc = "wudi_linux"

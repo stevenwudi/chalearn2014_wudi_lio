@@ -86,7 +86,7 @@ def preprocess(samples, set_label="training"):
         if (set_label == "training"):
             condition = (file_count < 650)
             if pc == "wudi":
-                dest = r"D:\Chalearn2014\Data_processed"  # dir to  destination processed data
+                dest = r"D:\Chalearn2014\Data_processed\train"  # dir to  destination processed data
             elif pc == "wudi_linux":
                 dest = "/idiap/temp/dwu/chalearn2014_data/Train_processed"
             elif pc == "lio":
@@ -94,7 +94,7 @@ def preprocess(samples, set_label="training"):
         else:
             condition = (file_count >= 650)
             if pc == "wudi":
-                dest = r"D:\Chalearn2014\Valid"  # dir to  destination processed data
+                dest = r"D:\Chalearn2014\Data_processed\valid"  # dir to  destination processed data
             elif pc == "wudi_linux":
                 dest = "/idiap/temp/dwu/chalearn2014_data/Valid_processed"
             elif pc == "lio":

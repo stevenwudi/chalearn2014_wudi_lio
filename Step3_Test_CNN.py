@@ -21,8 +21,8 @@ print "\n%s\n\t preparing data \n%s"%(('-'*30,)*2)
 # source and result directory
 pc = "wudi"
 if pc=="wudi":
-    src = r"I:\Kaggle_multimodal\Training_prepro"
-    res_dir_ = r"I:\Kaggle_multimodal\result"# dir of original data -- note that wudi has decompressed it!!!
+    src = r"D:\Chalearn2014\Data_processed"
+    res_dir_ = r"D:\Chalearn2014\result"# dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc"
     res_dir_ = "/home/lpigou/chalearn_wudi/try"
