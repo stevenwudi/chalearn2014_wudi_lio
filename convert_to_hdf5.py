@@ -5,11 +5,16 @@ from glob import glob
 from scipy import misc
 from numpy.random import permutation
 
+import cv2
+
+raw_input("Press Enter to continue...")
+
+
 
 pc = "wudi"
-pc = "wudi_linux"
+#pc = "wudi_linux"
 if pc=="wudi":
-    src = r"I:\Kaggle_multimodal\Training_prepro\\" # dir of original data -- note that wudi has decompressed it!!!
+    src = r"D:\Chalearn2014\Data_processed/"
 elif pc=="wudi_linux":
     src = '/idiap/temp/dwu/chalearn2014_data/Train_processed/'
 elif pc=="lio":
@@ -18,8 +23,8 @@ elif pc=="lio":
 
 def main():
     if pc=="wudi":
-        files_train = glob(src+"train_wudi/batch_*.zip")
-        files_valid = glob(src+"valid_wudi/batch_*.zip")
+        files_train = glob(src+"train/batch_*.zip")
+        files_valid = glob(src+"valid/batch_*.zip")
     elif pc=="wudi_linux":
         files_train = glob(src+"train_wudi/batch_*.zip")
         files_valid = glob(src+"valid_wudi/batch_*.zip")
@@ -38,12 +43,6 @@ def main():
     x_valid = f.create_dataset("x_valid", (29*1050,2,2,4,64,64), dtype='uint8', chunks=True)
     y_train = f.create_dataset("y_train", (400*1050,), dtype='uint8', chunks=True)
     y_valid = f.create_dataset("y_valid", (29*1050,), dtype='uint8', chunks=True)
-
-    # f = h5py.File(src+"data%d.hdf5", "a", driver="family", memb_size=2**32-1)
-    # # x_train = f.create_dataset("x_train", (400*1050,2,2,4,64,64), dtype='uint8', chunks=True)
-    # x_valid = f["x_valid"]
-    # # y_train = f.create_dataset("y_train", (400*1050,), dtype='uint8', chunks=True)
-    # y_valid = f.create_dataset("y_valid", (29*1050,), dtype='uint8', chunks=True)
 
 
     l = 0

@@ -30,7 +30,7 @@ from functions.preproc_functions import *
 
 #data path and store path definition
 pc = "wudi"
-pc = "wudi_linux"
+#pc = "wudi_linux"
 if pc == "wudi":
     data = r"D:\Chalearn2014\Data_unzipped"  # dir of original data -- note that wudi has decompressed it!!!
 elif pc == "wudi_linux":
@@ -61,7 +61,6 @@ offset = vid_shape_hand[1] / 2
 v, s, l = [], [], []
 batch_idx = 0
 count = 1
-n_div, p_i, valid_samps = None, None, None
 
 # Then we  choose 8 frame before and after the ground true data:
 # in effect it only generate 4 frames because acceleration requires 5 frames
@@ -87,7 +86,7 @@ def preprocess(samples, set_label="training"):
         if (set_label == "training"):
             condition = (file_count < 650)
             if pc == "wudi":
-                dest = r"D:\Chalearn2014\Data_processed"  # dir to  destination processed data
+                dest = r"D:\Chalearn2014\Data_processed\train"  # dir to  destination processed data
             elif pc == "wudi_linux":
                 dest = "/idiap/temp/dwu/chalearn2014_data/Train_processed"
             elif pc == "lio":
@@ -95,7 +94,7 @@ def preprocess(samples, set_label="training"):
         else:
             condition = (file_count >= 650)
             if pc == "wudi":
-                dest = r"I:\Kaggle_multimodal\Training_prepro\valid_wudi"  # dir to  destination processed data
+                dest = r"D:\Chalearn2014\Data_processed\valid"  # dir to  destination processed data
             elif pc == "wudi_linux":
                 dest = "/idiap/temp/dwu/chalearn2014_data/Valid_processed"
             elif pc == "lio":
@@ -152,14 +151,23 @@ def preprocess(samples, set_label="training"):
 
 
             end_time = time.time()
+<<<<<<< HEAD
             print "Processing one batch requires: %d second\n"% ( end_time - start_time)
             if condition and file_count==(len(samples)-1):
                 dump_last_data(video,skelet_feature, Targets.argmax(axis=1), skelet, dest)
                 print 'Process',p_i,'finished'
+=======
+            print "Processing one batch requires: %d second\n"% ( end_time - start_time)         
+            if condition and file_count==(len(samples)-1):
+                dump_last_data(video,skelet_feature, Targets.argmax(axis=1), skelet, dest)
 
-        if condition and file_count == (len(samples) - 1):
-            dump_last_data(video, skelet_feature, Targets.argmax(axis=1), skelet, dest)
-            print 'Process', p_i, 'finished'
+            # we should add the traning data as well
+            if not condition and file_count == 650-1:
+                dump_last_data(video,skelet_feature, Targets.argmax(axis=1), skelet, dest)
+
+
+>>>>>>> 4654ffa0b2afbd51d934224289cee3d7f09b83e2
+
 
 
 
