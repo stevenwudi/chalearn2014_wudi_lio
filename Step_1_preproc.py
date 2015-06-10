@@ -32,7 +32,7 @@ from functions.preproc_functions import *
 pc = "wudi"
 #pc = "wudi_linux"
 if pc == "wudi":
-    data = r"D:\Chalearn2014\Data_unzipped"  # dir of original data -- note that wudi has decompressed it!!!
+    data = r"F:\CHALEARN2014\Train"  # dir of original data -- note that wudi has decompressed it!!!
 elif pc == "wudi_linux":
     data = "/idiap/temp/dwu/chalearn2014_data/Train"
 elif pc == "lio":

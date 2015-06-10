@@ -145,3 +145,42 @@ class DataLoader():
     def shuffle_valid(self):
         self.pos_valid = list(random.permutation(self.n_iter_valid)*self.batch_size)
 
+
+class DataLoader_with_skeleton():
+    def __init__(self, src, batch_size):
+        self.batch_size = batch_size
+        import h5py
+        file = h5py.File(src+"/data%d.hdf5", "r", driver="family", memb_size=2**32-1)
+        self.x_train = file["x_train"]
+        self.x_valid = file["x_valid"]
+        self.y_train = file["y_train"]
+        self.y_valid = file["y_valid"]
+        self.x_train_skeleton_feature = file["x_train_skeleton_feature"]
+        self.x_valid_skeleton_feature = file["x_valid_skeleton_feature"]
+
+        self.n_iter_train = int(floor(self.x_train.shape[0]/float(batch_size)))
+        self.n_iter_valid = int(floor(self.x_valid.shape[0]/float(batch_size)))
+
+        self.shuffle_train()
+        self.shuffle_valid()
+
+    def next_train_batch(self, x_, y_, x_skeleton_):
+        if len(self.pos_train) == 0: self.shuffle_train()
+        pos = self.pos_train.pop()
+        x_.set_value(self.x_train[pos:pos+self.batch_size] , borrow=True)
+        y_.set_value(self.y_train[pos:pos+self.batch_size] , borrow=True)
+        x_skeleton_.set_value(self.x_train_skeleton_feature[pos:pos+self.batch_size] , borrow=True)
+
+
+    def next_valid_batch(self, x_, y_, x_skeleton_):
+        if len(self.pos_valid) == 0: self.shuffle_valid()
+        pos = self.pos_valid.pop()
+        x_.set_value(self.x_valid[pos:pos+self.batch_size] , borrow=True)
+        y_.set_value(self.y_valid[pos:pos+self.batch_size] , borrow=True)
+        x_skeleton_.set_value(self.x_valid_skeleton_feature[pos:pos+self.batch_size] , borrow=True)
+
+    def shuffle_train(self):
+        self.pos_train = list(random.permutation(self.n_iter_train)*self.batch_size)
+
+    def shuffle_valid(self):
+        self.pos_valid = list(random.permutation(self.n_iter_valid)*self.batch_size)

@@ -15,6 +15,7 @@ pc = "wudi"
 pc = "wudi_linux"
 if pc=="wudi":
     src = r"D:\Chalearn2014\Data_processed/"
+    dst = r"J:\Chalearn2014\dummy/"
 elif pc=="wudi_linux":
     src = '/idiap/temp/dwu/chalearn2014_data/Data_processed/'
 elif pc=="lio":
@@ -38,14 +39,14 @@ def main():
 
     
 
-    f = h5py.File(src+"data%d.hdf5", "w", driver="family", memb_size=2**32-1)
+    f = h5py.File(dst+"data%d.hdf5", "w", driver="family", memb_size=2**32-1)
     x_train = f.create_dataset("x_train", (400*1050,2,2,4,64,64), dtype='uint8', chunks=True)
     x_valid = f.create_dataset("x_valid", (29*1050,2,2,4,64,64), dtype='uint8', chunks=True)
     y_train = f.create_dataset("y_train", (400*1050,), dtype='uint8', chunks=True)
     y_valid = f.create_dataset("y_valid", (29*1050,), dtype='uint8', chunks=True)
 
-    x_train_skeleton_feature = f.create_dataset("x_train_skeleton_feature", (400*1050,891), dtype='uint8', chunks=True)
-    x_valid_skeleton_feature = f.create_dataset("x_valid_skeleton_feature", (29*1050,891), dtype='uint8', chunks=True)
+    x_train_skeleton_feature = f.create_dataset("x_train_skeleton_feature", (400*1050,891),  dtype='float32',chunks=True)
+    x_valid_skeleton_feature = f.create_dataset("x_valid_skeleton_feature", (29*1050,891), dtype='float32', chunks=True)
 
 
 
@@ -53,8 +54,9 @@ def main():
     l = 0
     pos = 0
     for path in files_train:
-        vid, lbl, skeleton_feature = load_data(path)
         print path
+        vid, lbl, skeleton_feature = load_data(path)
+        
         print vid.shape[0], lbl.shape[0], skeleton_feature.shape[0]
         assert vid.shape[0] == lbl.shape[0] == skeleton_feature.shape[0]
         l += vid.shape[0]
@@ -66,6 +68,7 @@ def main():
         x_train_skeleton_feature[pos:pos+vid.shape[0]] = skeleton_feature
         pos += vid.shape[0]
         print x_train.shape
+        break;
 
     l = 0
     pos = 0
@@ -83,6 +86,7 @@ def main():
         x_valid_skeleton_feature[pos:pos+vid.shape[0]] = skeleton_feature
         pos += vid.shape[0]
         print x_valid.shape
+        break;
 
     f.close()
     print "done"
