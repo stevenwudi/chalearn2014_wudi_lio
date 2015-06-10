@@ -39,7 +39,7 @@ from convnet3d import ConvLayer, NormLayer, PoolLayer, LogRegr, HiddenLayer, \
 
 # wudi's modular imports
 # the hyperparameter set the data dir, use etc classes, it's important to modify it according to your need
-from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop, net , files,  DataLoader
+from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop, net , files,  DataLoader_with_skeleton
 from functions.train_functions import normalize, _shared, _avg, write, ndtensor, \
                                   conv_args, var_norm, std_norm, lin,\
                                   print_params, load_data, _mini_batch, _batch,\
@@ -54,7 +54,7 @@ print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 # source and result directory
 pc = "wudi"
 if pc=="wudi":
-    src = r"I:\Kaggle_multimodal\Training_prepro"
+    src = r"D:\Chalearn2014\Data_processed"
     res_dir_ = r"I:\Kaggle_multimodal\result"# dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc"
@@ -114,21 +114,11 @@ print "\n%s\n\t preparing data \n%s"%(('-'*30,)*2)
 ####################################################################
 ####################################################################
 
-# print data sizes
-file_info = files(src)
-if use.valid2: file_info.n_test = len(file_info.valid2)
-else: file_info.n_test = 0
-write('data: total: %i train: %i valid: %i test: %i' % \
-    ((file_info.n_test+file_info.n_train+file_info.n_valid), 
-        file_info.n_train, 
-        file_info.n_valid, 
-        file_info.n_test), res_dir)
-
 first_report2 = True
 epoch = 0
 
 
-loader = DataLoader(src, tr.batch_size) # Lio changed it to read from HDF5 files
+loader = DataLoader_with_skeleton(src, tr.batch_size) # Lio changed it to read from HDF5 files
 
 ####################################################################
 ####################################################################
