@@ -12,11 +12,11 @@ raw_input("Press Enter to continue...")
 
 
 pc = "wudi"
-#pc = "wudi_linux"
+pc = "wudi_linux"
 if pc=="wudi":
     src = r"D:\Chalearn2014\Data_processed/"
 elif pc=="wudi_linux":
-    src = '/idiap/temp/dwu/chalearn2014_data/Train_processed/'
+    src = '/idiap/temp/dwu/chalearn2014_data/Data_processed/'
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc/"
 
@@ -26,8 +26,8 @@ def main():
         files_train = glob(src+"train/batch_*.zip")
         files_valid = glob(src+"valid/batch_*.zip")
     elif pc=="wudi_linux":
-        files_train = glob(src+"train_wudi/batch_*.zip")
-        files_valid = glob(src+"valid_wudi/batch_*.zip")
+        files_train = glob(src+"train/batch_*.zip")
+        files_valid = glob(src+"valid/batch_*.zip")
     elif pc=="lio":
         files_train = glob(src+"train/batch_*.zip")
         files_valid = glob(src+"valid/batch_*.zip")
