@@ -68,6 +68,9 @@ class tr:
     inspect = True # inspection for gradient
     video_shapes = [in_shape[-3:]]
 
+    _skeleon_in_shape = (batch_size, 891)  # skeleton input size
+
+
 # dropout
 class drop:
     p_vid_val = float32(0.5) # dropout on vid
@@ -155,6 +158,14 @@ class DataLoader_with_skeleton():
         self.x_valid = file["x_valid"]
         self.y_train = file["y_train"]
         self.y_valid = file["y_valid"]
+
+        ### we need to load the pre-store normalization constant
+        import cPickle
+        from dbn.utils import normalize
+        f = open('SK_normalization.pkl','rb')
+        SK_normalization = cPickle.load(f)
+        self.Mean1 = SK_normalization ['Mean1']
+        self.Std1 = SK_normalization['Std1']
         self.x_train_skeleton_feature = file["x_train_skeleton_feature"]
         self.x_valid_skeleton_feature = file["x_valid_skeleton_feature"]
 
@@ -169,7 +180,7 @@ class DataLoader_with_skeleton():
         pos = self.pos_train.pop()
         x_.set_value(self.x_train[pos:pos+self.batch_size] , borrow=True)
         y_.set_value(self.y_train[pos:pos+self.batch_size] , borrow=True)
-        x_skeleton_.set_value(self.x_train_skeleton_feature[pos:pos+self.batch_size] , borrow=True)
+        x_skeleton_.set_value( normalize(self.x_train_skeleton_feature[pos:pos+self.batch_size], Mean1, Std1), borrow=True)
 
 
     def next_valid_batch(self, x_, y_, x_skeleton_):

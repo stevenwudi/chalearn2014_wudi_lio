@@ -68,7 +68,6 @@ def main():
         x_train_skeleton_feature[pos:pos+vid.shape[0]] = skeleton_feature
         pos += vid.shape[0]
         print x_train.shape
-        break;
 
     l = 0
     pos = 0
@@ -86,7 +85,7 @@ def main():
         x_valid_skeleton_feature[pos:pos+vid.shape[0]] = skeleton_feature
         pos += vid.shape[0]
         print x_valid.shape
-        break;
+
 
     f.close()
     print "done"

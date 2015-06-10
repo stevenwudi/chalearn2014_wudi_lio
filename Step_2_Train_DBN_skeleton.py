@@ -48,12 +48,14 @@ def load_CodaLab_skel():
     print '... loading data'
 
     # Wudi hard coded this part.... sorry....
-    src = r"J:\Chalearn2014\dummy"
+    src = r"D:\Chalearn2014\Data_processed"
     import h5py
     file = h5py.File(src+"/data%d.hdf5", "r", driver="family", memb_size=2**32-1)
   
     Feature_train = file["x_train_skeleton_feature"]
     Target_all = file["y_train"]
+    print Feature_train[0,:100]
+    print Target_all[200:300]
     
     valid_set_feature = file["x_valid_skeleton_feature"]
     valid_set_new_target = file["y_valid"]
@@ -104,7 +106,7 @@ def test_GRBM_DBN(finetune_lr=1, pretraining_epochs=2,
     numpy_rng = numpy.random.RandomState(123)
     print '... building the model'
     # construct the Deep Belief Network
-    dbn = GRBM_DBN(numpy_rng=numpy_rng, n_ins=528,
+    dbn = GRBM_DBN(numpy_rng=numpy_rng, n_ins=891,
               hidden_layers_sizes=[2000, 2000, 1000],
               n_outs=101, finetune_lr=finetune_lr)
 
@@ -150,7 +152,7 @@ def test_GRBM_DBN(finetune_lr=1, pretraining_epochs=2,
 
     # get the training, validation and testing function for the model
     print '... getting the finetuning functions'
-    train_fn, validate_model, test_model = dbn.build_finetune_functions(
+    train_fn, validate_model = dbn.build_finetune_functions(
                 datasets=datasets, batch_size=batch_size,
                 annealing_learning_rate=annealing_learning_rate)
 
@@ -199,17 +201,13 @@ def test_GRBM_DBN(finetune_lr=1, pretraining_epochs=2,
 
                     # save best validation score and iteration number
                     best_validation_loss = this_validation_loss
-                    best_iter = iter
 
-                    # test it on the test set
-                    test_losses = test_model()
-                    test_score = numpy.mean(test_losses)
+
 
                     end_time_temp = time.clock()
-                    print(('epoch %i, minibatch %i/%i, validation error %f %%' \
-                           'test error of best model %f %%, used time %d sec') %
+                    print(('epoch %i, minibatch %i/%i, validation error %f %%, used time %d sec') %
                           (epoch, minibatch_index + 1, n_train_batches,this_validation_loss * 100.,
-                           test_score * 100., (end_time_temp - start_time_temp)))
+                            (end_time_temp - start_time_temp)))
 
             if patience <= iter:
                 done_looping = True
@@ -228,28 +226,40 @@ def test_GRBM_DBN(finetune_lr=1, pretraining_epochs=2,
     dbn.save(filename)
 
 
-    if 0: # here for testing, where we never used
-    ## Now for testing
-        dbn = GRBM_DBN(numpy_rng=numpy_rng, n_ins=528,
-        hidden_layers_sizes=[1000, 1000, 500],
-        n_outs=201)
 
-    
-        dbn.load('dbn_2014-05-22-18-39-37.npy')
-        # compiling a Theano function that computes the mistakes that are made by
-        # the model on a minibatch
-        index = T.lscalar('index') 
-        validate_model = theano.function(inputs=[index],
-            outputs=dbn.logLayer.p_y_given_x,
-            givens={
-                dbn.x: valid_set_x[index * batch_size:(index + 1) * batch_size]})
-
-        n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]
-        n_valid_batches /= batch_size
-        temp = [validate_model(i)
-                                for i in xrange(n_valid_batches)]
 
 
 
 if __name__ == '__main__':
     test_GRBM_DBN()
+
+if 1: # here for testing, where we never used
+## Now for testing
+dbn = GRBM_DBN(numpy_rng=numpy_rng, n_ins=891,
+hidden_layers_sizes=[2000, 2000, 1000],
+n_outs=101)
+
+    
+dbn.load('dbn_2015-01-01-18-01-07.npy')
+# compiling a Theano function that computes the mistakes that are made by
+# the model on a minibatch
+index = T.lscalar('index') 
+validate_model = theano.function(inputs=[index],
+    outputs=dbn.logLayer.p_y_given_x,
+    givens={
+        dbn.x: valid_set_x[index * batch_size:(index + 1) * batch_size]})
+
+validate_model = theano.function([index], outputs=dbn.errors,
+              givens={dbn.x: valid_set_x[index * batch_size:
+                                          (index + 1) * batch_size],
+                      dbn.y: valid_set_y[index * batch_size:
+                                          (index + 1) * batch_size]})
+
+validate_model = theano.function(inputs=[index],
+    outputs=dbn.logLayer.y_pred,
+    givens={
+        dbn.x: valid_set_x[index * batch_size:(index + 1) * batch_size]})
+
+n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]
+n_valid_batches /= batch_size
+temp = [validate_model(i)  for i in xrange(n_valid_batches)]

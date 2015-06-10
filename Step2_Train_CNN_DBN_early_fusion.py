@@ -21,6 +21,7 @@ import string
 from scipy import ndimage
 
 # numpy imports
+import numpy
 from numpy import ones, array, prod, zeros, empty, inf, float32, random
 
 # theano imports
@@ -31,8 +32,9 @@ from theano.tensor import TensorType
 from theano.sandbox.cuda import CudaNdarrayType, CudaNdarray  #----wudi comment: why comment this line?
 import theano.tensor as T
 
+
 # customized imports
-#data_aug
+from dbn.GRBM_DBN import GRBM_DBN
 from functions.data_aug import start_load, load_normal, load_gzip, res_shape, ratio, cut_img, misc, h
 from convnet3d import ConvLayer, NormLayer, PoolLayer, LogRegr, HiddenLayer, \
                     DropoutLayer, relu, tanh
@@ -86,13 +88,12 @@ if use.mom:
 
 # symbolic variables
 # in shape: #frames * gray/depth * body/hand * 4 maps
-x = ndtensor(len(tr.in_shape))(name = 'x') # video input
-# x = T.TensorVariable(CudaNdarrayType([False] * len(in_shape))) # video input
-y = T.ivector(name = 'y') # labels
 idx_mini = T.lscalar(name="idx_mini") # minibatch index
 idx_micro = T.lscalar(name="idx_micro") # microbatch index
+x = ndtensor(len(tr.in_shape))(name = 'x') # video input
+y = T.ivector(name = 'y') # labels
 x_ = _shared(empty(tr.in_shape))
-y_ = _shared(empty((tr.batch_size,)))
+y_ = _shared(empty(tr.batch_size))
 y_int32 = T.cast(y_,'int32')
 
 # print parameters
@@ -107,18 +108,12 @@ for c in (use, lr, batch, net, reg, drop, mom, tr):
         if val.startswith("<Cuda"): continue
         if val.startswith("<Tensor"): continue
         write("  "+key+": "+val, res_dir)
-
 ####################################################################
 ####################################################################
 print "\n%s\n\t preparing data \n%s"%(('-'*30,)*2)
 ####################################################################
 ####################################################################
 
-first_report2 = True
-epoch = 0
-
-
-loader = DataLoader_with_skeleton(src, tr.batch_size) # Lio changed it to read from HDF5 files
 
 ####################################################################
 ####################################################################
@@ -206,6 +201,35 @@ if use.maxout:
     out = maxout(out, (batch.micro,net.hidden))
     net.hidden /= 2
 
+
+####################################################################
+#################################################################### 
+# DBN
+# ------------------------------------------------------------------------------
+# in shape: #frames * gray/depth * body/hand * 4 maps
+
+x_skeleton = ndtensor(len(tr._skeleon_in_shape))(name = 'x_skeleton') # video input
+x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
+
+
+dbn = GRBM_DBN(numpy_rng=numpy.random.RandomState(123), n_ins=891, \
+                hidden_layers_sizes=[2000, 2000, 1000], n_outs=101)
+
+#####################################################################
+# load pretrained model parameter  -- need to change here
+######################################################################    
+dbn.load('dbn_2015-01-01-18-01-07.npy')
+
+dbn.x = x_skeleton
+outputs = dbn.sigmoid_layers[-1].output
+
+#####################################################################
+# fuse the ConvNet output with skeleton output  -- need to change here
+######################################################################  
+out = T.concatenate([out, outputs], axis=1)
+# compiling a Theano function that computes the mistakes that are made by
+# the model on a minibatch
+
 # softmax layer
 layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden, 
     W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
@@ -231,7 +255,13 @@ errors = layers[-1].errors(y)
 # gradient descent
 # ------------------------------------------------------------------------------
 # parameter list
-for layer in layers: params.extend(layer.params)
+for layer in layers: 
+    params.extend(layer.params)
+
+# pre-trained dbn parameter last layer  (W, b) doesn't need to incorporate into the params
+# for calculating the gradient
+params.extend(dbn.params[:-2])
+
 # gradient list
 gparams = T.grad(cost, params)
 assert len(gparams)==len(params)
@@ -275,22 +305,23 @@ if True:
 
     def givens(dataset_):
         return {x: get_batch(dataset_[0]),
-                y: get_batch(dataset_[1])}
+                y: get_batch(dataset_[1]),
+                x_skeleton: get_batch(dataset_[2])}
 
-    print 'compiling apply_updates'
-    apply_updates = function([], 
-        updates=mini_updates, 
-        on_unused_input='ignore')
+    #print 'compiling apply_updates'
+    #apply_updates = function([], 
+    #    updates=mini_updates, 
+    #    on_unused_input='ignore')
 
     print 'compiling train_model'
     train_model = function([idx_mini, idx_micro], [cost, errors, insp], 
         updates=micro_updates, 
-        givens=givens((x_,y_int32)), 
+        givens=givens((x_, y_int32, x_skeleton_)), 
         on_unused_input='ignore')
 
     print 'compiling test_model'
     test_model = function([idx_mini, idx_micro], [cost, errors], 
-        givens=givens((x_,y_int32)),
+        givens=givens((x_, y_int32, x_skeleton_)),
         on_unused_input='ignore')
 
 ####################################################################
@@ -315,6 +346,10 @@ tr.moved = True
 
 save_params(params, res_dir)
 
+
+loader = DataLoader_with_skeleton(src, tr.batch_size) # Lio changed it to read from HDF5 files
+
+
 for epoch in xrange(tr.n_epochs):
     ce = []
     print_params(params) 
@@ -327,10 +362,10 @@ for epoch in xrange(tr.n_epochs):
         time_start = time()
         #load
         # load_data(train_file, tr.rng, epoch, tr.batch_size, x_, y_)
-        loader.next_train_batch(x_, y_)
+        loader.next_train_batch(x_, y_, x_skeleton_)
         # print "loading time", time()-time_start
         # train
-        tr.batch_size = y_.get_value(borrow=True).shape[0]
+        tr.batch_size = y_int32.get_value(borrow=True).shape[0]
         ce.append(_batch(train_model, tr.batch_size, batch, True, apply_updates))
        
         if epoch==0: timing_report(i, time()-time_start, tr.batch_size, res_dir)

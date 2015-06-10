@@ -151,12 +151,12 @@ def preprocess(samples, set_label="training"):
 
 
             end_time = time.time()
-<<<<<<< HEAD
+
             print "Processing one batch requires: %d second\n"% ( end_time - start_time)
             if condition and file_count==(len(samples)-1):
                 dump_last_data(video,skelet_feature, Targets.argmax(axis=1), skelet, dest)
                 print 'Process',p_i,'finished'
-=======
+
             print "Processing one batch requires: %d second\n"% ( end_time - start_time)         
             if condition and file_count==(len(samples)-1):
                 dump_last_data(video,skelet_feature, Targets.argmax(axis=1), skelet, dest)
@@ -166,7 +166,7 @@ def preprocess(samples, set_label="training"):
                 dump_last_data(video,skelet_feature, Targets.argmax(axis=1), skelet, dest)
 
 
->>>>>>> 4654ffa0b2afbd51d934224289cee3d7f09b83e2
+
 
 
 

@@ -181,7 +181,7 @@ class GRBM_DBN(object):
         #################################################
         # Wudi change the here for adapting hdf5 datafile
         #################################################
-        n_iter_train = int(floor(strain_set_x.get_value(borrow=True).shape[0]/float(batch_size)))
+        n_iter_train = int(floor(train_set_x.get_value(borrow=True).shape[0]/float(batch_size)))
         pos_train =  numpy.array(list(random.permutation(n_iter_train)*batch_size))
         _shared_pos_train = theano.shared(pos_train)
 
