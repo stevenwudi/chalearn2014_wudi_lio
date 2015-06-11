@@ -2,7 +2,7 @@
 from convnet3d import relu
 from numpy import float32, random, floor
 from glob import glob
-
+from dbn.utils import normalize
 # hyper parameters
 # ------------------------------------------------------------------------------
 
@@ -103,12 +103,13 @@ class net:
     # scaler = [[33,24],[7.58,7.14],[5,5],1,1]
     scaler = [[1,1],[1,1],[1,1],1,1]
     stride = [1,1,1]
-    hidden_traj = 64 # hidden units in MLP
+    hidden_traj = 1000 # hidden units in MLP
     hidden_vid = 1024 # hidden units in MLP
     norm_method = "lcn" # normalisation method: lcn = local contrast normalisation
     pool_method = "max" # maxpool
     fusion = "early" # early or late fusion
-    hidden = hidden_traj+hidden_vid if fusion=="late" else 1024 # hidden units in MLP
+    hidden_penultimate = hidden_vid
+    hidden = hidden_traj+hidden_vid if fusion=="early" else 1024 # hidden units in MLP
     STATE_NO = 5
     n_class = STATE_NO * 20 + 1
     n_stages = len(kernels)
@@ -150,7 +151,7 @@ class DataLoader():
 
 
 class DataLoader_with_skeleton():
-    def __init__(self, src, batch_size):
+    def __init__(self, src, batch_size, Mean1, Std1):
         self.batch_size = batch_size
         import h5py
         file = h5py.File(src+"/data%d.hdf5", "r", driver="family", memb_size=2**32-1)
@@ -160,12 +161,8 @@ class DataLoader_with_skeleton():
         self.y_valid = file["y_valid"]
 
         ### we need to load the pre-store normalization constant
-        import cPickle
-        from dbn.utils import normalize
-        f = open('SK_normalization.pkl','rb')
-        SK_normalization = cPickle.load(f)
-        self.Mean1 = SK_normalization ['Mean1']
-        self.Std1 = SK_normalization['Std1']
+        self.Mean1 = Mean1
+        self.Std1 = Std1
         self.x_train_skeleton_feature = file["x_train_skeleton_feature"]
         self.x_valid_skeleton_feature = file["x_valid_skeleton_feature"]
 
@@ -180,7 +177,7 @@ class DataLoader_with_skeleton():
         pos = self.pos_train.pop()
         x_.set_value(self.x_train[pos:pos+self.batch_size] , borrow=True)
         y_.set_value(self.y_train[pos:pos+self.batch_size] , borrow=True)
-        x_skeleton_.set_value( normalize(self.x_train_skeleton_feature[pos:pos+self.batch_size], Mean1, Std1), borrow=True)
+        x_skeleton_.set_value( normalize(self.x_train_skeleton_feature[pos:pos+self.batch_size], self.Mean1, self.Std1), borrow=True)
 
 
     def next_valid_batch(self, x_, y_, x_skeleton_):

@@ -25,7 +25,7 @@ warnings.filterwarnings("ignore")
 class GRBM_DBN(object):
 
     def __init__(self, numpy_rng, theano_rng=None, n_ins=784,
-                 hidden_layers_sizes=[500, 500], n_outs=10, finetune_lr=0.1):
+                 hidden_layers_sizes=[500, 500], n_outs=10, finetune_lr=0.1, input=[]):
 
         self.sigmoid_layers = []
         self.rbm_layers = []
@@ -36,7 +36,10 @@ class GRBM_DBN(object):
         if not theano_rng:
             theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
         # allocate symbolic variables for the data
-        self.x = T.matrix('x')  # the data is presented as rasterized images
+        if input:
+            self.x = input
+        else :
+            self.x = T.matrix('x')  # the data is presented as rasterized images
         self.y = T.ivector('y')  # the labels are presented as 1D vector
                                  # of [int] labels
 
