@@ -115,14 +115,10 @@ video_cnn = conv3d_chalearn(x, use, lr, batch, net, reg, drop, mom, tr, res_dir)
 out = T.concatenate([video_cnn.out, dbn.sigmoid_layers[-1].output], axis=1)
 
 # some activation inspection
-insp =  T.stack(0,0)
-#insp = T.scalar(name = 'insp') # labels
-#for layer in dbn.sigmoid_layers:
-#    insp = T.concatenate([insp, T.mean(layer.output)], axis=1 )
-
-#for insp_temp in video_cnn.insp:
-#    insp = T.concatenate([insp, insp_temp] , axis=1)
-
+insp =  []
+for insp_temp in video_cnn.insp:    insp.append(insp_temp)
+for layer in dbn.sigmoid_layers:    insp.append(T.mean(layer.output))
+insp = T.stack(insp)
 
 # softmax layer
 layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden, 
