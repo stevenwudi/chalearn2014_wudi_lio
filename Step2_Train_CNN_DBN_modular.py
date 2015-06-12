@@ -146,6 +146,9 @@ for layer in video_cnn.layers:
 # for calculating the gradient
 params.extend(dbn.params[:-2])
 
+# softmax layer params
+params.extend(layers[-1].params)
+
 # gradient list
 gparams = T.grad(cost, params)
 
