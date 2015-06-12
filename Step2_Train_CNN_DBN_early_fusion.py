@@ -53,11 +53,14 @@ from functions.train_functions import normalize, _shared, _avg, write, ndtensor,
 print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 ####################################################################
 ####################################################################
+
+use.load = True  # we load the CNN parameteres here
+
 # source and result directory
 pc = "wudi"
 if pc=="wudi":
     src = r"D:\Chalearn2014\Data_processed"
-    res_dir_ = r"I:\Kaggle_multimodal\result"# dir of original data -- note that wudi has decompressed it!!!
+    res_dir_ = r"D:\Chalearn2014\result"# dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc"
     res_dir_ = "/home/lpigou/chalearn_wudi/try"
@@ -378,7 +381,7 @@ for epoch in xrange(tr.n_epochs):
     # print insp_
     train_ce.append(_avg(ce))
     # validate
-    valid_ce.append(test_lio(file_info.valid, use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_,loader))
+    valid_ce.append(test_lio(use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_,loader))
 
     # save best params
     # if valid_ce[-1][1] < 0.25:
