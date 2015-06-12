@@ -18,6 +18,7 @@ if pc=="wudi":
     dst = r"J:\Chalearn2014\dummy/"
 elif pc=="wudi_linux":
     src = '/idiap/temp/dwu/chalearn2014_data/Data_processed/'
+    dst = '/idiap/user/dwu/chalearn/'
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc/"
 
@@ -68,7 +69,6 @@ def main():
         x_train_skeleton_feature[pos:pos+vid.shape[0]] = skeleton_feature
         pos += vid.shape[0]
         print x_train.shape
-        break;
 
     l = 0
     pos = 0
@@ -86,7 +86,6 @@ def main():
         x_valid_skeleton_feature[pos:pos+vid.shape[0]] = skeleton_feature
         pos += vid.shape[0]
         print x_valid.shape
-        break;
 
     f.close()
     print "done"
