@@ -254,7 +254,7 @@ def test(files_, use, test_model, batch, drop, rng, epoch, batch_size, x_, y_):
     return _avg(ce)
 
 
-def test_lio(files_, use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, loader):
+def test_lio(use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, loader):
     global jobs
     if use.drop: # dont use dropout when testing
         #drop.p_traj.set_value(float32(0.)) 

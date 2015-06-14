@@ -42,7 +42,7 @@ from functions.train_functions import normalize, _shared, _avg, write, ndtensor,
                                   conv_args, var_norm, std_norm, lin,\
                                   print_params, load_data, _mini_batch, _batch,\
                                   timing_report, training_report, epoch_report, \
-                                  test, test_lio, save_results, move_results, save_params
+                                  test, test_lio, save_results, move_results, save_params, load_params
 
 ####################################################################
 ####################################################################
@@ -52,7 +52,7 @@ print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 # source and result directory
 pc = "wudi"
 if pc=="wudi":
-    src = r"I:\Kaggle_multimodal\Training_prepro"
+    src = r"D:\Chalearn2014\Data_processed"
     res_dir_ = r"I:\Kaggle_multimodal\result"# dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc"
@@ -129,7 +129,8 @@ epoch = 0
 
 
 loader = DataLoader(src, tr.batch_size) # Lio changed it to read from HDF5 files
-
+# we load the CNN parameteres here
+use.load = True  
 ####################################################################
 ####################################################################
 print "\n%s\n\tbuilding\n%s"%(('-'*30,)*2)
@@ -202,8 +203,13 @@ if use.maxout:
 if net.fusion == "early":
     out = vid_
     # hidden layer
-    layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden, rng=tr.rng, 
-        W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=relu))
+    if use.load:
+        Wh, bh = load_params(use)  # This is test, wudi added this!
+        layers.append(HiddenLayer(out, W = Wh, b =bh, n_in=n_in_MLP, n_out=net.hidden, rng=tr.rng, 
+            W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=relu))
+    else:
+        layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden, rng=tr.rng, 
+            W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=relu))
     out = layers[-1].output
 
 
@@ -217,8 +223,14 @@ if use.maxout:
     net.hidden /= 2
 
 # softmax layer
-layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden, 
-    W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
+if use.load:
+    Ws, bs = load_params(use) # This is test, wudi added this!
+    layers.append(LogRegr(out, W = Ws, b = bs, rng=tr.rng, activation=lin, n_in=net.hidden, 
+        W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
+else:
+    layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden, 
+        W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
+
 
 """
 layers[-1] : softmax layer

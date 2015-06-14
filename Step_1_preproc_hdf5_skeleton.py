@@ -87,6 +87,7 @@ def main():
         pos += vid.shape[0]
         print x_valid.shape
 
+
     f.close()
     print "done"
 

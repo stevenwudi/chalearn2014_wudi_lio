@@ -21,6 +21,7 @@ import string
 from scipy import ndimage
 
 # numpy imports
+import numpy
 from numpy import ones, array, prod, zeros, empty, inf, float32, random
 
 # theano imports
@@ -31,8 +32,9 @@ from theano.tensor import TensorType
 from theano.sandbox.cuda import CudaNdarrayType, CudaNdarray  #----wudi comment: why comment this line?
 import theano.tensor as T
 
+
 # customized imports
-#data_aug
+from dbn.GRBM_DBN import GRBM_DBN
 from functions.data_aug import start_load, load_normal, load_gzip, res_shape, ratio, cut_img, misc, h
 from convnet3d import ConvLayer, NormLayer, PoolLayer, LogRegr, HiddenLayer, \
                     DropoutLayer, relu, tanh
@@ -51,11 +53,14 @@ from functions.train_functions import normalize, _shared, _avg, write, ndtensor,
 print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 ####################################################################
 ####################################################################
+
+use.load = True  # we load the CNN parameteres here
+
 # source and result directory
 pc = "wudi"
 if pc=="wudi":
     src = r"D:\Chalearn2014\Data_processed"
-    res_dir_ = r"I:\Kaggle_multimodal\result"# dir of original data -- note that wudi has decompressed it!!!
+    res_dir_ = r"D:\Chalearn2014\result"# dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc"
     res_dir_ = "/home/lpigou/chalearn_wudi/try"
@@ -86,14 +91,38 @@ if use.mom:
 
 # symbolic variables
 # in shape: #frames * gray/depth * body/hand * 4 maps
-x = ndtensor(len(tr.in_shape))(name = 'x') # video input
-# x = T.TensorVariable(CudaNdarrayType([False] * len(in_shape))) # video input
-y = T.ivector(name = 'y') # labels
+import cPickle
+f = open('SK_normalization.pkl','rb')
+SK_normalization = cPickle.load(f)
+Mean1 = SK_normalization ['Mean1']
+Std1 = SK_normalization['Std1']
+loader = DataLoader_with_skeleton(src, tr.batch_size, Mean1, Std1) # Lio changed it to read from HDF5 files
+
+
 idx_mini = T.lscalar(name="idx_mini") # minibatch index
 idx_micro = T.lscalar(name="idx_micro") # microbatch index
+x = ndtensor(len(tr.in_shape))(name = 'x') # video input
+y = T.ivector(name = 'y') # labels
 x_ = _shared(empty(tr.in_shape))
-y_ = _shared(empty((tr.batch_size,)))
+y_ = _shared(empty(tr.batch_size))
 y_int32 = T.cast(y_,'int32')
+
+####################################################################
+#################################################################### 
+# DBN
+# ------------------------------------------------------------------------------
+x_skeleton = ndtensor(len(tr._skeleon_in_shape))(name = 'x_skeleton') # video input
+x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
+
+dbn = GRBM_DBN(numpy_rng=numpy.random.RandomState(123), n_ins=891, \
+                hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input=x_skeleton )
+
+#####################################################################
+# load pretrained model parameter  -- need to change here
+######################################################################    
+dbn.load('dbn_2015-01-01-18-01-07.npy')
+
+outputs = dbn.sigmoid_layers[-1].output
 
 # print parameters
 # ------------------------------------------------------------------------------
@@ -107,18 +136,6 @@ for c in (use, lr, batch, net, reg, drop, mom, tr):
         if val.startswith("<Cuda"): continue
         if val.startswith("<Tensor"): continue
         write("  "+key+": "+val, res_dir)
-
-####################################################################
-####################################################################
-print "\n%s\n\t preparing data \n%s"%(('-'*30,)*2)
-####################################################################
-####################################################################
-
-first_report2 = True
-epoch = 0
-
-
-loader = DataLoader_with_skeleton(src, tr.batch_size) # Lio changed it to read from HDF5 files
 
 ####################################################################
 ####################################################################
@@ -140,10 +157,6 @@ for i in xrange(net.n_stages):
     else:
         print "  conv",tr.video_shapes[i],"->",conv_s
     print "  pool",conv_s,"->",tr.video_shapes[i+1],"x",net.maps[i+1]
-
-# number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size
-n_in_MLP = net.maps[-1]*net.n_convnets*prod(tr.video_shapes[-1]) 
-print 'MLP:', n_in_MLP, "->", net.hidden, "->", net.n_class, ""
 
 if use.depth:
     if net.n_convnets==2: 
@@ -175,6 +188,7 @@ for i in xrange(len(out)): out[i] = std_norm(out[i],axis=[-3,-2,-1])
 out = [out[i].flatten(2) for i in range(len(out))]
 vid_ = T.concatenate(out, axis=1)
 
+n_in_MLP = net.maps[-1]*net.n_convnets*prod(tr.video_shapes[-1]) 
 # dropout
 if use.drop: 
     vid_ = DropoutLayer(vid_, rng=tr.rng, p=drop.p_vid).output
@@ -192,7 +206,7 @@ if use.maxout:
 if net.fusion == "early":
     out = vid_
     # hidden layer
-    layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden, rng=tr.rng, 
+    layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden_penultimate, rng=tr.rng, 
         W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=relu))
     out = layers[-1].output
 
@@ -205,6 +219,19 @@ if use.drop: out = DropoutLayer(out, rng=tr.rng, p=drop.p_hidden).output
 if use.maxout:
     out = maxout(out, (batch.micro,net.hidden))
     net.hidden /= 2
+
+
+#####################################################################
+# fuse the ConvNet output with skeleton output  -- need to change here
+######################################################################  
+out = T.concatenate([out, outputs], axis=1)
+
+# number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size
+
+print 'MLP:', n_in_MLP, "->", net.hidden_penultimate, "+", net.hidden_traj, '->', \
+   net.hidden, '->', net.n_class, ""
+# compiling a Theano function that computes the mistakes that are made by
+# the model on a minibatch
 
 # softmax layer
 layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden, 
@@ -231,7 +258,13 @@ errors = layers[-1].errors(y)
 # gradient descent
 # ------------------------------------------------------------------------------
 # parameter list
-for layer in layers: params.extend(layer.params)
+for layer in layers: 
+    params.extend(layer.params)
+
+# pre-trained dbn parameter last layer  (W, b) doesn't need to incorporate into the params
+# for calculating the gradient
+params.extend(dbn.params[:-2])
+
 # gradient list
 gparams = T.grad(cost, params)
 assert len(gparams)==len(params)
@@ -275,7 +308,8 @@ if True:
 
     def givens(dataset_):
         return {x: get_batch(dataset_[0]),
-                y: get_batch(dataset_[1])}
+                y: get_batch(dataset_[1]),
+                x_skeleton: get_batch(dataset_[2])}
 
     print 'compiling apply_updates'
     apply_updates = function([], 
@@ -285,12 +319,12 @@ if True:
     print 'compiling train_model'
     train_model = function([idx_mini, idx_micro], [cost, errors, insp], 
         updates=micro_updates, 
-        givens=givens((x_,y_int32)), 
+        givens=givens((x_, y_int32, x_skeleton_)), 
         on_unused_input='ignore')
 
     print 'compiling test_model'
     test_model = function([idx_mini, idx_micro], [cost, errors], 
-        givens=givens((x_,y_int32)),
+        givens=givens((x_, y_int32, x_skeleton_)),
         on_unused_input='ignore')
 
 ####################################################################
@@ -315,6 +349,7 @@ tr.moved = True
 
 save_params(params, res_dir)
 
+
 for epoch in xrange(tr.n_epochs):
     ce = []
     print_params(params) 
@@ -327,7 +362,7 @@ for epoch in xrange(tr.n_epochs):
         time_start = time()
         #load
         # load_data(train_file, tr.rng, epoch, tr.batch_size, x_, y_)
-        loader.next_train_batch(x_, y_)
+        loader.next_train_batch(x_, y_, x_skeleton_)
         # print "loading time", time()-time_start
         # train
         tr.batch_size = y_.get_value(borrow=True).shape[0]
@@ -346,7 +381,7 @@ for epoch in xrange(tr.n_epochs):
     # print insp_
     train_ce.append(_avg(ce))
     # validate
-    valid_ce.append(test_lio(file_info.valid, use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_,loader))
+    valid_ce.append(test_lio(use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_,loader))
 
     # save best params
     # if valid_ce[-1][1] < 0.25:
