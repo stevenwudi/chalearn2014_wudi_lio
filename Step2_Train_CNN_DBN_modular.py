@@ -258,7 +258,7 @@ for epoch in xrange(tr.n_epochs):
     # print insp_
     train_ce.append(_avg(ce))
     # validate
-    valid_ce.append(test_lio(use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_,loader))
+    valid_ce.append(test_lio_skel(use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_, loader, x_skeleton_))
 
     # save best params
     # if valid_ce[-1][1] < 0.25:

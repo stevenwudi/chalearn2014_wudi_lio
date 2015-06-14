@@ -278,6 +278,30 @@ def test_lio(use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, loade
     # start_load(files.train,augm=use.aug)
     return _avg(ce)
 
+def test_lio_skel(use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, loader, x_skeleton_):
+    global jobs
+    if use.drop: # dont use dropout when testing
+        #drop.p_traj.set_value(float32(0.)) 
+        drop.p_vid.set_value(float32(0.)) 
+        drop.p_hidden.set_value(float32(0.)) 
+    ce = []
+    first_test_file = True
+    for i in range(loader.n_iter_valid):
+        if first_test_file:
+            augm = False
+            first_test_file = False
+        else: augm = True
+        # load_data(file, rng, epoch, batch_size, x_, y_)
+        loader.next_valid_batch(x_, y_, x_skeleton_)
+        #load_data(file,  rng, epoch)
+        ce.append(_batch(test_model, batch_size, batch, is_train=False))
+    if use.drop: # reset dropout
+        #drop.p_traj.set_value(drop.p_traj_val) 
+        drop.p_vid.set_value(drop.p_vid_val) 
+        drop.p_hidden.set_value(drop.p_hidden_val)
+    # start_load(files.train,augm=use.aug)
+    return _avg(ce)
+
 
 def save_results(train_ce, valid_ce, res_dir, valid2_ce=None, params=None):
     if len(valid_ce)==0: rate = 0
