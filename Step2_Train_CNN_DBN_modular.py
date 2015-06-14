@@ -30,7 +30,7 @@ from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop,\
                                      net , files,  DataLoader_with_skeleton
 from functions.train_functions import _shared, _avg, write, ndtensor, print_params, lin,\
                                       timing_report, training_report, epoch_report, _batch,\
-                                      test_lio, save_results, move_results, save_params
+                                      test_lio, save_results, move_results, save_params, test_lio_skel
 
 ####################################################################
 ####################################################################

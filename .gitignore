@@ -59,3 +59,5 @@ Temporary Items
 
 *.csv
 *.png
+
+*.npy
