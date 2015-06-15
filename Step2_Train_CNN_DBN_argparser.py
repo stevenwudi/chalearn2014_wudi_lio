@@ -32,7 +32,15 @@ from functions.train_functions import _shared, _avg, write, ndtensor, print_para
                                       timing_report, training_report, epoch_report, _batch,\
                                       test_lio, save_results, move_results, save_params, test_lio_skel
 
+# we need to parse an absolute path for HPC to load
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument('path')
+args = parser.parse_args()
+load_path = args.path
+
+print load_path
 ####################################################################
 ####################################################################
 print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
@@ -82,7 +90,7 @@ y_int32 = T.cast(y_,'int32')
 
 # in shape: #frames * gray/depth * body/hand * 4 maps
 import cPickle
-f = open('SK_normalization.pkl','rb')
+f = open(os.path.join(load_path, 'SK_normalization.pkl'),'rb')
 SK_normalization = cPickle.load(f)
 Mean1 = SK_normalization ['Mean1']
 Std1 = SK_normalization['Std1']
@@ -101,14 +109,15 @@ x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 dbn = GRBM_DBN(numpy_rng=random.RandomState(123), n_ins=891, \
                 hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input=x_skeleton )  
 # we load the pretrained DBN skeleton parameteres here
-dbn.load('dbn_2015-06-14-09-18-32.npy')
+dbn.load(os.path.join(load_path, 'dbn_2015-06-14-09-18-32.npy'))
 
 ####################################################################
 # 3DCNN for video module
 #################################################################### 
 # we load the CNN parameteres here
-use.load = True  
-video_cnn = conv3d_chalearn(x, use, lr, batch, net, reg, drop, mom, tr, res_dir)
+use.load = True
+
+video_cnn = conv3d_chalearn(x, use, lr, batch, net, reg, drop, mom, tr, res_dir, load_path)
 
 #####################################################################
 # fuse the ConvNet output with skeleton output  -- need to change here

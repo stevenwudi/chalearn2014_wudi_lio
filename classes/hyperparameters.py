@@ -151,9 +151,10 @@ class DataLoader():
 
 
 class DataLoader_with_skeleton():
-    def __init__(self, src, batch_size, Mean1, Std1):
+    def __init__(self, src, batch_size, Mean1, Std1, load_path=""):
         self.batch_size = batch_size
         import h5py
+        import os
         file = h5py.File(src+"/data%d.hdf5", "r", driver="family", memb_size=2**32-1)
         self.x_train = file["x_train"]
         self.x_valid = file["x_valid"]

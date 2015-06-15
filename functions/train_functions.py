@@ -116,7 +116,7 @@ def load_data(path, rng, epoch, batch_size, x_,y_):
 
 
 
-def conv_args(stage, i, batch, net, use, rng, video_shapes):
+def conv_args(stage, i, batch, net, use, rng, video_shapes, load_path):
     """ ConvLayer arguments, i: stage index """
     args = {
         'batch_size':batch.micro, 
@@ -136,7 +136,7 @@ def conv_args(stage, i, batch, net, use, rng, video_shapes):
         print "sharing weights!"
         args["W"], args["b"] = layers[-1].params # shared weights
     elif use.load:
-        args["W"], args["b"] = load_params(use) # load stored parameters
+        args["W"], args["b"] = load_params(use,load_path) # load stored parameters
     return args
 
 
@@ -352,13 +352,16 @@ def save_params(params, res_dir, s=""):
     dump(l, file, -1)
     file.close()
 
-def load_params(use):
+def load_params(use, load_path=""):
     import os
-    path = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
+    if os.path.exists(load_path):
+        path = load_path
+    else:
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
     if os.path.isfile('paramsbest.zip'): 
         file = GzipFile("paramsbest.zip", "rb")
-    elif os.path.isfile(path+'\paramsbest.zip'):
-        file = GzipFile(path+"\paramsbest.zip", "rb")
+    elif os.path.isfile(path+'paramsbest.zip'):
+        file = GzipFile(path+"paramsbest.zip", "rb")
     else:
         file = GzipFile("params.zip", "rb")
     par = load(file)
