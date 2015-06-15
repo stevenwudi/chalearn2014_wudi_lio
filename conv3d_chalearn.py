@@ -13,7 +13,7 @@ class conv3d_chalearn(object):
     """
     this is the class for generating chalearn convnet 3d moduele
     """
-    def __init__(self, x, use, lr, batch, net, reg, drop, mom, tr, res_dir):
+    def __init__(self, x, use, lr, batch, net, reg, drop, mom, tr, res_dir, load_path):
 
         self.out = []
         self.layers = []
@@ -76,7 +76,7 @@ class conv3d_chalearn(object):
                     out[i] = std_norm(out[i],axis=[-3,-2,-1])
                 # convolutions  
                 out[i] *= net.scaler[stage][i]
-                self.layers.append(ConvLayer(out[i], **conv_args(stage, i, batch, net, use, tr.rng, tr.video_shapes)))
+                self.layers.append(ConvLayer(out[i], **conv_args(stage, i, batch, net, use, tr.rng, tr.video_shapes, load_path)))
                 out[i] = self.layers[-1].output
                 out[i] = PoolLayer(out[i], net.pools[stage], method=net.pool_method).output
                 if tr.inspect: self.insp.append(T.mean(out[i]))

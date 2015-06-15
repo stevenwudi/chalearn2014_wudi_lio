@@ -32,7 +32,15 @@ from functions.train_functions import _shared, _avg, write, ndtensor, print_para
                                       timing_report, training_report, epoch_report, _batch,\
                                       test_lio, save_results, move_results, save_params, test_lio_skel
 
+# we need to parse an absolute path for HPC to load
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument('path')
+args = parser.parse_args()
+load_path = args.path
+
+print load_path
 ####################################################################
 ####################################################################
 print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
@@ -40,11 +48,7 @@ print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 ####################################################################
 # source and result directory
 pc = "wudi"
-
 if pc=="wudi":
-    src = r"D:\Chalearn2014\Data_processed"
-    res_dir_ = r"D:\Chalearn2014\result"# dir of original data -- note that wudi has decompressed it!!!
-elif pc = "wudi_linux":
     src = r"/idiap/user/dwu/chalearn/"
     res_dir_ = r"/idiap/user/dwu/chalearn/result/"# dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
@@ -84,10 +88,9 @@ x_ = _shared(empty(tr.in_shape))
 y_ = _shared(empty(tr.batch_size))
 y_int32 = T.cast(y_,'int32')
 
-
-# load the skeleton normalisation --Lio didn't normalise video input, but should we?
+# in shape: #frames * gray/depth * body/hand * 4 maps
 import cPickle
-f = open('SK_normalization.pkl','rb')
+f = open(os.path.join(load_path, 'SK_normalization.pkl'),'rb')
 SK_normalization = cPickle.load(f)
 Mean1 = SK_normalization ['Mean1']
 Std1 = SK_normalization['Std1']
@@ -105,18 +108,16 @@ x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
 dbn = GRBM_DBN(numpy_rng=random.RandomState(123), n_ins=891, \
                 hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input=x_skeleton )  
-# we load the pretrained DBN skeleton parameteres here, currently pretraining is done
-# unsupervisedly, we can load the supervised pretrainining parameters later
-dbn.load('dbn_2015-06-14-09-18-32.npy')  
-
+# we load the pretrained DBN skeleton parameteres here
+dbn.load(os.path.join(load_path, 'dbn_2015-06-14-09-18-32.npy'))
 
 ####################################################################
 # 3DCNN for video module
 #################################################################### 
 # we load the CNN parameteres here
-use.load = True  
+use.load = True
 
-video_cnn = conv3d_chalearn(x, use, lr, batch, net, reg, drop, mom, tr, res_dir)
+video_cnn = conv3d_chalearn(x, use, lr, batch, net, reg, drop, mom, tr, res_dir, load_path)
 
 #####################################################################
 # fuse the ConvNet output with skeleton output  -- need to change here
@@ -188,32 +189,33 @@ print "\n%s\n\tcompiling\n%s"%(('-'*30,)*2)
 #################################################################### 
 # compile functions
 # ------------------------------------------------------------------------------
-def get_batch(_data): 
-    pos_mini = idx_mini*batch.mini
-    idx1 = pos_mini + idx_micro*batch.micro
-    idx2 = pos_mini + (idx_micro+1)*batch.micro
-    return _data[idx1:idx2]
+if True:
+    def get_batch(_data): 
+        pos_mini = idx_mini*batch.mini
+        idx1 = pos_mini + idx_micro*batch.micro
+        idx2 = pos_mini + (idx_micro+1)*batch.micro
+        return _data[idx1:idx2]
 
-def givens(dataset_):
-    return {x: get_batch(dataset_[0]),
-            y: get_batch(dataset_[1]),
-            x_skeleton: get_batch(dataset_[2])}
+    def givens(dataset_):
+        return {x: get_batch(dataset_[0]),
+                y: get_batch(dataset_[1]),
+                x_skeleton: get_batch(dataset_[2])}
 
-print 'compiling apply_updates'
-apply_updates = function([], 
-    updates=mini_updates, 
-    on_unused_input='ignore')
+    print 'compiling apply_updates'
+    apply_updates = function([], 
+        updates=mini_updates, 
+        on_unused_input='ignore')
 
-print 'compiling train_model'
-train_model = function([idx_mini, idx_micro], [cost, errors, insp], 
-    updates=micro_updates, 
-    givens=givens((x_, y_int32, x_skeleton_)), 
-    on_unused_input='ignore')
+    print 'compiling train_model'
+    train_model = function([idx_mini, idx_micro], [cost, errors, insp], 
+        updates=micro_updates, 
+        givens=givens((x_, y_int32, x_skeleton_)), 
+        on_unused_input='ignore')
 
-print 'compiling test_model'
-test_model = function([idx_mini, idx_micro], [cost, errors], 
-    givens=givens((x_, y_int32, x_skeleton_)),
-    on_unused_input='ignore')
+    print 'compiling test_model'
+    test_model = function([idx_mini, idx_micro], [cost, errors], 
+        givens=givens((x_, y_int32, x_skeleton_)),
+        on_unused_input='ignore')
 
 ####################################################################
 ####################################################################
