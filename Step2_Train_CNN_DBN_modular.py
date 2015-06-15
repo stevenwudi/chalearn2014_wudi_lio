@@ -44,7 +44,7 @@ pc = "wudi"
 if pc=="wudi":
     src = r"D:\Chalearn2014\Data_processed"
     res_dir_ = r"D:\Chalearn2014\result"# dir of original data -- note that wudi has decompressed it!!!
-elif pc = "wudi_linux":
+elif pc == "wudi_linux":
     src = r"/idiap/user/dwu/chalearn/"
     res_dir_ = r"/idiap/user/dwu/chalearn/result/"# dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
