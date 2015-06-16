@@ -328,7 +328,7 @@ def save_results(train_ce, valid_ce, res_dir, valid2_ce=None, params=None):
 def move_results(res_dir):
     global moved
     dst = res_dir.split("/")
-    dst = dst[:-2]  + [dst[-1]] 
+    #dst = dst[:-2]  + [dst[-1]] 
     dst = string.join(dst,"/") 
     shutil.move(res_dir, dst)
     res_dir = dst
