@@ -40,7 +40,7 @@ print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 ####################################################################
 # source and result directory
 pc = "wudi"
-
+pc = "wudi_linux"
 if pc=="wudi":
     src = r"D:\Chalearn2014\Data_processed"
     res_dir_ = r"D:\Chalearn2014\result"# dir of original data -- note that wudi has decompressed it!!!
