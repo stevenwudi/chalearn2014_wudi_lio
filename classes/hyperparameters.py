@@ -218,7 +218,7 @@ class DataLoader_with_skeleton_normalisation():
     def next_train_batch(self, x_, y_, x_skeleton_):
         if len(self.pos_train) == 0: self.shuffle_train()
         pos = self.pos_train.pop()
-        x_.set_value(normalize(self.x_train[pos:pos+self.batch_size], Mean_CNN, Std_CNN) , borrow=True)
+        x_.set_value(normalize(self.x_train[pos:pos+self.batch_size], self.Mean_CNN, self.Std_CNN) , borrow=True)
         y_.set_value(self.y_train[pos:pos+self.batch_size] , borrow=True)
         x_skeleton_.set_value( normalize(self.x_train_skeleton_feature[pos:pos+self.batch_size], self.Mean1, self.Std1), borrow=True)
 
@@ -226,7 +226,7 @@ class DataLoader_with_skeleton_normalisation():
     def next_valid_batch(self, x_, y_, x_skeleton_):
         if len(self.pos_valid) == 0: self.shuffle_valid()
         pos = self.pos_valid.pop()
-        x_.set_value(normalize(self.x_valid[pos:pos+self.batch_size], Mean_CNN, Std_CNN) , borrow=True)
+        x_.set_value(normalize(self.x_valid[pos:pos+self.batch_size], self.Mean_CNN, self.Std_CNN) , borrow=True)
         y_.set_value(self.y_valid[pos:pos+self.batch_size] , borrow=True)
         x_skeleton_.set_value(self.x_valid_skeleton_feature[pos:pos+self.batch_size] , borrow=True)
 
