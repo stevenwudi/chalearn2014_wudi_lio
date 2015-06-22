@@ -104,8 +104,7 @@ video_cnn = conv3d_chalearn(x, use, lr, batch, net, reg, drop, mom, tr, res_dir)
 #####################################################################
 # fuse the ConvNet output with skeleton output  -- need to change here
 ######################################################################  
-out = T.concatenate([video_cnn.out, dbn.sigmoid_layers[-1].output], axis=1)
-
+out = video_cnn.out
 # some activation inspection
 insp =  []
 for insp_temp in video_cnn.insp:    insp.append(insp_temp)
