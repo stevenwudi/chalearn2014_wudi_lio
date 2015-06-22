@@ -39,7 +39,7 @@ print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 ####################################################################
 # source and result directory
 pc = "wudi"
-#pc = "wudi_linux"
+pc = "wudi_linux"
 if pc=="wudi":
     src = r"D:\Chalearn2014\Data_processed"
     res_dir_ = r"D:\Chalearn2014\result"# dir of original data -- note that wudi has decompressed it!!!
@@ -80,6 +80,10 @@ x_ = _shared(empty(tr.in_shape))
 y_ = _shared(empty(tr.batch_size))
 y_int32 = T.cast(y_,'int32')
 
+
+### useless fake, but DataLoader_with_skeleton_normalisation would require that
+x_skeleton = ndtensor(len(tr._skeleon_in_shape))(name = 'x_skeleton') # video input
+x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
 # load the skeleton normalisation --Lio didn't normalise video input, but should we?
 import cPickle
@@ -128,7 +132,6 @@ for layer in video_cnn.layers:
 
 # pre-trained dbn parameter last layer  (W, b) doesn't need to incorporate into the params
 # for calculating the gradient
-params.extend(dbn.params[:-2])
 
 # softmax layer params
 params.extend(layers[-1].params)
