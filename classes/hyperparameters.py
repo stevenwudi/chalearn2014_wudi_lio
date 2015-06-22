@@ -6,18 +6,6 @@ from dbn.utils import normalize
 # hyper parameters
 # ------------------------------------------------------------------------------
 
-class files:
-    """
-    files to define the file location and relevant info.
-    """
-    def __init__(self, src):
-        self.train = glob(src+'/train/batch_*.zip')#+glob(src+'/valid/batch_100_*.zip')
-        self.valid = glob(src+'/valid/batch_*.zip')#[:2]
-        self.test = glob(src+'/train/batch_*.zip')#[:2]
-        self.n_train = len(self.train) 
-        self.n_valid = len(self.valid)
-        self.n_test = len(self.test)
-
 # use techniques/methods
 class use:
     drop = True # dropout
@@ -26,7 +14,7 @@ class use:
     load = False # load params.p file
     load_params_pos = 0
     valid2 = False
-    fast_conv = False
+    fast_conv = True
     norm_div = False
     maxout = False
     norm = True # normalization layer
@@ -113,7 +101,7 @@ class net:
     STATE_NO = 5
     n_class = STATE_NO * 20 + 1
     n_stages = len(kernels)
-    activation = "relu" # tanh, sigmoid, relu, softplus
+    activation = "leaky_relu" # tanh, sigmoid, relu, softplus, leaky_relu
 
 class DataLoader():
     def __init__(self, src, batch_size):
@@ -185,6 +173,60 @@ class DataLoader_with_skeleton():
         if len(self.pos_valid) == 0: self.shuffle_valid()
         pos = self.pos_valid.pop()
         x_.set_value(self.x_valid[pos:pos+self.batch_size] , borrow=True)
+        y_.set_value(self.y_valid[pos:pos+self.batch_size] , borrow=True)
+        x_skeleton_.set_value(self.x_valid_skeleton_feature[pos:pos+self.batch_size] , borrow=True)
+
+    def shuffle_train(self):
+        self.pos_train = list(random.permutation(self.n_iter_train)*self.batch_size)
+
+    def shuffle_valid(self):
+        self.pos_valid = list(random.permutation(self.n_iter_valid)*self.batch_size)
+
+
+class DataLoader_with_skeleton_normalisation():
+    def __init__(self, src, batch_size, Mean_CNN=0, Std_CNN=1, Mean1=0, Std1=1, load_path=""):
+        self.batch_size = batch_size
+        import h5py
+        import os
+        file = h5py.File(src+"/data%d.hdf5", "r", driver="family", memb_size=2**32-1)
+        self.x_train = file["x_train"]
+        self.x_valid = file["x_valid"]
+        self.y_train = file["y_train"]
+        self.y_valid = file["y_valid"]
+
+        # we used only the first 1000 frames
+        #from dbn.utils import zero_mean_unit_variance
+        #[train_set_feature_normalized, Mean_CNN, Std_CNN]  = zero_mean_unit_variance(self.x_train[:5000,:] / 255.)
+        #### we need to load the pre-store normalization constant
+        #import cPickle as pickle
+        #f = open('CNN_normalization.pkl','wb')
+        #pickle.dump( {"Mean_CNN": Mean_CNN, "Std_CNN": Std_CNN },f)
+        #f.close()
+        self.Mean_CNN = Mean_CNN
+        self.Std_CNN = Std_CNN
+        self.Mean1 = Mean1
+        self.Std1 = Std1
+        self.x_train_skeleton_feature = file["x_train_skeleton_feature"]
+        self.x_valid_skeleton_feature = file["x_valid_skeleton_feature"]
+
+        self.n_iter_train = int(floor(self.x_train.shape[0]/float(batch_size)))
+        self.n_iter_valid = int(floor(self.x_valid.shape[0]/float(batch_size)))
+
+        self.shuffle_train()
+        self.shuffle_valid()
+
+    def next_train_batch(self, x_, y_, x_skeleton_):
+        if len(self.pos_train) == 0: self.shuffle_train()
+        pos = self.pos_train.pop()
+        x_.set_value(normalize(self.x_train[pos:pos+self.batch_size], Mean_CNN, Std_CNN) , borrow=True)
+        y_.set_value(self.y_train[pos:pos+self.batch_size] , borrow=True)
+        x_skeleton_.set_value( normalize(self.x_train_skeleton_feature[pos:pos+self.batch_size], self.Mean1, self.Std1), borrow=True)
+
+
+    def next_valid_batch(self, x_, y_, x_skeleton_):
+        if len(self.pos_valid) == 0: self.shuffle_valid()
+        pos = self.pos_valid.pop()
+        x_.set_value(normalize(self.x_valid[pos:pos+self.batch_size], Mean_CNN, Std_CNN) , borrow=True)
         y_.set_value(self.y_valid[pos:pos+self.batch_size] , borrow=True)
         x_skeleton_.set_value(self.x_valid_skeleton_feature[pos:pos+self.batch_size] , borrow=True)
 

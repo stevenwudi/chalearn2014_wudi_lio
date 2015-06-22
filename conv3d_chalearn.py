@@ -5,7 +5,7 @@ from theano import shared
 import theano.tensor as T
 
 from convnet3d import ConvLayer, NormLayer, PoolLayer, LogRegr, HiddenLayer, \
-                    DropoutLayer, relu
+                    DropoutLayer, relu, leaky_relu
 
 from functions.train_functions import write, conv_args, var_norm, std_norm, lin
 
@@ -13,7 +13,7 @@ class conv3d_chalearn(object):
     """
     this is the class for generating chalearn convnet 3d moduele
     """
-    def __init__(self, x, use, lr, batch, net, reg, drop, mom, tr, res_dir, load_path):
+    def __init__(self, x, use, lr, batch, net, reg, drop, mom, tr, res_dir, load_path=""):
 
         self.out = []
         self.layers = []
