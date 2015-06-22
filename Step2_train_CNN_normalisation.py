@@ -113,9 +113,6 @@ insp = T.stack(insp)
 # softmax layer
 layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden, 
     W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
-# number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size
-print 'MLP:', video_cnn.n_in_MLP, "->", net.hidden_penultimate, "+", net.hidden_traj, '->', \
-   net.hidden, '->', net.n_class, ""
 
 # cost function
 cost = layers[-1].negative_log_likelihood(y)
