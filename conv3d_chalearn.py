@@ -54,7 +54,7 @@ class conv3d_chalearn(object):
 
         # number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size
         n_in_MLP = net.maps[-1]*net.n_convnets*prod(tr.video_shapes[-1]) 
-        print 'MLP:', n_in_MLP, "->", net.hidden, "->", net.n_class, ""
+        print 'MLP:', n_in_MLP, "->", net.hidden_vid, "->", net.n_class, ""
 
         if use.depth:
             if net.n_convnets==2: 

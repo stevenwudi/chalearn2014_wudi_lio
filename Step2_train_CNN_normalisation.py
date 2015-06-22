@@ -108,7 +108,6 @@ out = video_cnn.out
 # some activation inspection
 insp =  []
 for insp_temp in video_cnn.insp:    insp.append(insp_temp)
-for layer in dbn.sigmoid_layers:    insp.append(T.mean(layer.output))
 insp = T.stack(insp)
 
 # softmax layer
