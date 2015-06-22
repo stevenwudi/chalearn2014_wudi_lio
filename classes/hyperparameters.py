@@ -22,7 +22,7 @@ class use:
 
 # learning rate
 class lr:
-    init = 1e-3 # lr initial value
+    init = 1e-2 # lr initial value
     decay = .95 # lr := lr*decay
     decay_big = .1
     decay_each_epoch = True
@@ -45,7 +45,7 @@ class mom:
 
 # training
 class tr:
-    n_epochs = 1000 # number of epochs to train
+    n_epochs = 100 # number of epochs to train
     patience = 1 # number of unimproved epochs before decaying learning rate
     batch_size = 1024 # batchsize --should be strictly no larger than 1000!!! LIO care--because
                         # during preprocessing, wudi make a batch if number of frames reach 1000!
