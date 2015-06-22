@@ -33,7 +33,7 @@ import theano.tensor as T
 #data_aug
 from functions.data_aug import start_load, load_normal, load_gzip, res_shape, ratio, cut_img, misc, h
 from convnet3d import ConvLayer, NormLayer, PoolLayer, LogRegr, HiddenLayer, \
-                    DropoutLayer, relu, tanh
+                    DropoutLayer, relu, tanh, leaky_relu
 
 # wudi's modular imports
 # the hyperparameter set the data dir, use etc classes, it's important to modify it according to your need
@@ -51,9 +51,13 @@ print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 ####################################################################
 # source and result directory
 pc = "wudi"
+pc = "wudi_linux"
 if pc=="wudi":
     src = r"D:\Chalearn2014\Data_processed"
-    res_dir_ = r"I:\Kaggle_multimodal\result"# dir of original data -- note that wudi has decompressed it!!!
+    res_dir_ = r"D:\Chalearn2014\result"# dir of original data -- note that wudi has decompressed it!!!
+elif pc == "wudi_linux":
+    src = r"/idiap/user/dwu/chalearn/"
+    res_dir_ = r"/idiap/user/dwu/chalearn/result/"# dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc"
     res_dir_ = "/home/lpigou/chalearn_wudi/try"
@@ -130,7 +134,7 @@ epoch = 0
 
 loader = DataLoader(src, tr.batch_size) # Lio changed it to read from HDF5 files
 # we load the CNN parameteres here
-use.load = True  
+#use.load = True  
 ####################################################################
 ####################################################################
 print "\n%s\n\tbuilding\n%s"%(('-'*30,)*2)
@@ -154,7 +158,7 @@ for i in xrange(net.n_stages):
 
 # number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size
 n_in_MLP = net.maps[-1]*net.n_convnets*prod(tr.video_shapes[-1]) 
-print 'MLP:', n_in_MLP, "->", net.hidden, "->", net.n_class, ""
+print 'MLP:', n_in_MLP, "->", net.hidden_vid, "->", net.n_class, ""
 
 if use.depth:
     if net.n_convnets==2: 
@@ -206,10 +210,10 @@ if net.fusion == "early":
     if use.load:
         Wh, bh = load_params(use)  # This is test, wudi added this!
         layers.append(HiddenLayer(out, W = Wh, b =bh, n_in=n_in_MLP, n_out=net.hidden, rng=tr.rng, 
-            W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=relu))
+            W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=leaky_relu))
     else:
         layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden, rng=tr.rng, 
-            W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=relu))
+            W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=leaky_relu))
     out = layers[-1].output
 
 

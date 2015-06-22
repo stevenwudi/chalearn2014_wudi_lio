@@ -116,7 +116,7 @@ def load_data(path, rng, epoch, batch_size, x_,y_):
 
 
 
-def conv_args(stage, i, batch, net, use, rng, video_shapes, load_path):
+def conv_args(stage, i, batch, net, use, rng, video_shapes, load_path=""):
     """ ConvLayer arguments, i: stage index """
     args = {
         'batch_size':batch.micro, 
