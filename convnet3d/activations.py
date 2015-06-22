@@ -16,3 +16,6 @@ def relu(X):
     """Rectified linear units (relu)"""
     return T.maximum(0,X)
 
+def leaky_relu(X):
+    """Leaky Rectified linear units (relu)"""
+    return T.maximum(0.3*X, X)

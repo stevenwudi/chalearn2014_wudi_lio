@@ -26,7 +26,7 @@ class use:
     load = False # load params.p file
     load_params_pos = 0
     valid2 = False
-    fast_conv = False
+    fast_conv = True
     norm_div = False
     maxout = False
     norm = True # normalization layer
@@ -113,7 +113,7 @@ class net:
     STATE_NO = 5
     n_class = STATE_NO * 20 + 1
     n_stages = len(kernels)
-    activation = "relu" # tanh, sigmoid, relu, softplus
+    activation = "leaky_relu" # tanh, sigmoid, relu, softplus, leaky_relu
 
 class DataLoader():
     def __init__(self, src, batch_size):
