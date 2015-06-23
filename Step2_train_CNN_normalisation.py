@@ -63,8 +63,7 @@ mini_updates = []
 micro_updates = []
 last_upd = []
 update = []
-L1 = []
-L2 = []
+
 
 # shared variables
 learning_rate = shared(float32(lr.init))
@@ -82,6 +81,8 @@ x_ = _shared(empty(tr.in_shape))
 y_ = _shared(empty(tr.batch_size))
 y_int32 = T.cast(y_,'int32')
 
+L1 = _shared(0)
+L2 = _shared(0)
 
 ### useless fake, but DataLoader_with_skeleton_normalisation would require that
 x_skeleton = ndtensor(len(tr._skeleon_in_shape))(name = 'x_skeleton') # video input
