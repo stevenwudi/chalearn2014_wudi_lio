@@ -117,6 +117,13 @@ layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden_vid,
 # cost function
 cost = layers[-1].negative_log_likelihood(y)
 
+# regularization
+if reg.L1_vid > 0 or reg.L2_vid > 0:
+    # L1 and L2 regularization
+    L1 = T.abs_(layers[-2].W).sum() + T.abs_(layers[-1].W).sum()
+    L2 = (layers[-2].W ** 2).sum() + (layers[-1].W ** 2).sum()
+    cost += reg.L1_vid*L1 + reg.L2_vid*L2 
+
 # function computing the number of errors
 errors = layers[-1].errors(y)
 

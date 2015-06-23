@@ -22,7 +22,7 @@ class use:
 
 # learning rate
 class lr:
-    init = 1e-2 # lr initial value
+    init = 1e-3 # lr initial value
     decay = .95 # lr := lr*decay
     decay_big = .1
     decay_each_epoch = True
@@ -33,11 +33,13 @@ class batch:
     micro = 64  # number of samples that fits in memory
     batch_size = 32 #batch size (wudi added this orthodox parameter)
 
-# regularization
-class reg:
-    L1_vid = .0 # degree/amount of regularization
-    L2_vid = .0 # 1: only L1, 0: only L2
 
+    # regularization
+class reg:
+    L1_traj = 0.0 #
+    L2_traj = 0.0005 # 
+    L1_vid = 0.0 #
+    L2_vid = 0.0005 # 
 # momentum
 class mom:
     momentum = .9 # momentum value
