@@ -114,15 +114,8 @@ insp = T.stack(insp)
 layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden_vid, 
     W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
 
-# cost function
-cost = layers[-1].negative_log_likelihood(y)
 
-# regularization
-if reg.L1_vid > 0 or reg.L2_vid > 0:
-    # L1 and L2 regularization
-    L1 = T.abs_(layers[-2].W).sum() + T.abs_(layers[-1].W).sum()
-    L2 = (layers[-2].W ** 2).sum() + (layers[-1].W ** 2).sum()
-    cost += reg.L1_vid*L1 + reg.L2_vid*L2 
+
 
 # function computing the number of errors
 errors = layers[-1].errors(y)
@@ -137,6 +130,17 @@ for layer in video_cnn.layers:
 
 # softmax layer params
 params.extend(layers[-1].params)
+
+# cost function
+cost = layers[-1].negative_log_likelihood(y)
+
+# regularisation
+# symbolic Theano variable that represents the L1 regularization term
+L1  = T.sum(abs(params))
+# symbolic Theano variable that represents the squared L2 term
+L2_sqr = T.sum(params ** 2)
+# cost loss
+cost = cost + reg.L1_vid * L1 + reg.L2_vid * L2
 
 # gradient list
 gparams = T.grad(cost, params)
