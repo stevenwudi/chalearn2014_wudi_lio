@@ -63,6 +63,8 @@ mini_updates = []
 micro_updates = []
 last_upd = []
 update = []
+L1 = []
+L2 = []
 
 # shared variables
 learning_rate = shared(float32(lr.init))
@@ -136,9 +138,9 @@ cost = layers[-1].negative_log_likelihood(y)
 
 # regularisation
 # symbolic Theano variable that represents the L1 regularization term
-L1  = T.sum(abs(params))
-# symbolic Theano variable that represents the squared L2 term
-L2_sqr = T.sum(params ** 2)
+for p in params:
+    L1 += T.sum(abs(p))
+    L2 += T.sum(param**2)
 # cost loss
 cost = cost + reg.L1_vid * L1 + reg.L2_vid * L2
 
