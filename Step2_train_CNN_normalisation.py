@@ -140,7 +140,7 @@ cost = layers[-1].negative_log_likelihood(y)
 # symbolic Theano variable that represents the L1 regularization term
 for p in params:
     L1 += T.sum(abs(p))
-    L2 += T.sum(param**2)
+    L2 += T.sum(p**2)
 # cost loss
 cost = cost + reg.L1_vid * L1 + reg.L2_vid * L2
 
