@@ -116,7 +116,7 @@ for insp_temp in video_cnn.insp:    insp.append(insp_temp)
 insp = T.stack(insp)
 
 # softmax layer
-layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden_vid, 
+layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden_vid, 
     W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
 
 

@@ -10,7 +10,7 @@ from numpy import zeros, sqrt, ones
 from numpy.random import RandomState
 from theano import shared, config, _asarray
 from theano.ifelse import ifelse
-from activations import  sigmoid, relu, softplus, tanh
+from activations import sigmoid, tanh, relu, softplus, leaky_relu
 from theano.tensor.nnet import  softmax
 from theano.tensor.shared_randomstreams import RandomStreams
 import theano.tensor as T
@@ -20,15 +20,11 @@ floatX = config.floatX
 class LogRegr(object):
     """ Logistic Regression Layer, Top layer, Softmax layer, Output layer """
 
-    def __init__(self, input, n_in, n_out, activation, rng, layer_name="LogReg", 
+    def __init__(self, input, n_in, n_out, rng, layer_name="LogReg", 
         W=None, b=None, borrow=True, b_scale=0.1,W_scale=0.01):
 
         # Weigth matrix W
         if W != None: self.W = shared(W, name=layer_name+"_W",borrow=borrow)
-        # elif activation in (relu,softplus): 
-        #     W_val = _asarray(rng.normal(loc=0, scale=W_scale, size=(n_in, n_out)),
-        #                      dtype=floatX)
-        #     self.W = shared(W_val, name=layer_name+"_W", borrow=borrow)
         else:
             self.W = shared(zeros((n_in, n_out), dtype=floatX), 
                 name=layer_name+"_W",
@@ -36,9 +32,6 @@ class LogRegr(object):
 
         # Bias vector
         if b!=None: self.b = shared(b, name=layer_name+"_b",borrow=borrow)
-        # elif activation in (relu,softplus): 
-        #     b_val = (ones((n_out,))*b_scale).astype(floatX)
-        #     self.b = shared(b_val, name=layer_name+"_b", borrow=borrow)
         else:
             self.b = shared(zeros((n_out,), dtype=floatX),
                 name=layer_name+"_b",
@@ -67,18 +60,18 @@ class HiddenLayer(object):
     def __init__(self, input, n_in, n_out, activation, rng=RandomState(1234), 
         layer_name="HiddenLayer", W=None, b=None, borrow=True, b_scale=0.1,W_scale=0.01):
 
-        if W!=None: self.W = shared(value=W, borrow=borrow, name=layer_name+'_Wu')
-        elif activation in (tanh,sigmoid): 
-            print "tanh"
+        if W!=None: 
+            self.W = shared(value=W, borrow=borrow, name=layer_name+'_Wu')
+            print activation
+        elif activation in ('tanh','sigmoid'):           
             # uniformly sampled W
             low = -sqrt(6. / (n_in + n_out))
             high = sqrt(6. / (n_in + n_out))
             values = rng.uniform(low=low, high=high, size=(n_in, n_out))
             W_val = _asarray(values, dtype=floatX)
-            if activation == sigmoid: W_val *= 4
+            if activation == 'sigmoid': W_val *= 4
             self.W = shared(value=W_val, borrow=borrow, name=layer_name+'_Wu')
         else: 
-            print "relu or lin"
             W_val = _asarray(rng.normal(loc=0, scale=W_scale, 
                 size=(n_in, n_out)), dtype=floatX)
             # W_val = (ones((n_in, n_out))*W_scale).astype(floatX)
@@ -86,7 +79,7 @@ class HiddenLayer(object):
             
 
         if b != None: self.b = shared(b, name=layer_name+"_b",borrow=borrow)
-        elif activation in (relu,softplus): 
+        elif activation in ('relu',softplus): 
             b_val = (ones((n_out,))*b_scale).astype(floatX)
             self.b = shared(b_val, name=layer_name+"_b",borrow=borrow)
         else: 
@@ -96,7 +89,7 @@ class HiddenLayer(object):
         # Parameters of the model
         self.params = [self.W, self.b]
         # Output of the hidden layer
-        self.output = activation(T.dot(input, self.W) + self.b)
+        self.output = eval(activation)(T.dot(input, self.W) + self.b)
 
 
 class DropoutLayer(object):
