@@ -3,6 +3,7 @@ from convnet3d import relu
 from numpy import float32, random, floor
 from glob import glob
 from dbn.utils import normalize
+from convnet3d.activations import relu, softplus, leaky_relu
 # hyper parameters
 # ------------------------------------------------------------------------------
 
@@ -103,7 +104,7 @@ class net:
     STATE_NO = 5
     n_class = STATE_NO * 20 + 1
     n_stages = len(kernels)
-    activation = "leaky_relu" # tanh, sigmoid, relu, softplus, leaky_relu
+    activation = 'leaky_relu' # tanh, sigmoid, relu, softplus, leaky_relu
 
 class DataLoader():
     def __init__(self, src, batch_size):

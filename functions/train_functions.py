@@ -12,7 +12,7 @@ from gzip import GzipFile
 from cPickle import dump, load
 from data_aug import load_gzip, res_shape, ratio, cut_img, misc, h
 
-from convnet3d import relu
+from convnet3d import relu, leaky_relu
 # theano imports
 import theano.tensor as T
 from theano.tensor import TensorType
@@ -120,7 +120,7 @@ def conv_args(stage, i, batch, net, use, rng, video_shapes, load_path=""):
     """ ConvLayer arguments, i: stage index """
     args = {
         'batch_size':batch.micro, 
-        'activation':relu, 
+        'activation':net.activation, 
         'rng':rng,
         'n_in_maps':net.maps[stage],
         'n_out_maps':net.maps[stage+1], 

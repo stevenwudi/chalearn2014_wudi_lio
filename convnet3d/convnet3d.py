@@ -11,7 +11,7 @@ RectLayer: rectification (absolute value)
 
 from conv3d2d_new import conv3d
 from maxpool3d import max_pool_3d
-from activations import relu, softplus
+from activations import relu, softplus, leaky_relu
 
 from numpy import array, sqrt, prod, ones, floor, repeat, pi, exp, zeros, sum
 from numpy.random import RandomState
@@ -45,8 +45,8 @@ class ConvLayer(object):
             # fan in: filter time x filter height x filter width x input maps
             fan_in = prod(kernel_shape)*n_in_maps
             norm_scale = 2. * sqrt( 1. / fan_in )
-            if activation in (relu,softplus): 
-                print "relu"
+            if activation in ('relu', 'softplus', 'leaky_relu'): 
+                print activation
                 norm_scale = W_scale
             W_shape = (n_out_maps, n_in_maps)+kernel_shape
             W_val = _asarray(rng.normal(loc=0, scale=norm_scale, size=W_shape),\
@@ -58,7 +58,7 @@ class ConvLayer(object):
         # init bias
         if b != None: 
             self.b = shared(array(b, dtype=floatX), name=layer_name+"_b", borrow=borrow) # wudi made it shared
-        elif activation in (relu,softplus): 
+        elif activation in ('relu', 'softplus', 'leaky_relu'): 
             # print b_scale
             b_val = (ones((n_out_maps,), dtype=floatX)*b_scale).astype(floatX)
             self.b = shared(b_val, name=layer_name+"_b", borrow=borrow)
@@ -82,7 +82,7 @@ class ConvLayer(object):
 
         out += self.b.dimshuffle('x',0,'x','x','x')
 
-        self.output = activation(out)
+        self.output = eval(activation)(out)
 
 
 class NormLayer(object):
