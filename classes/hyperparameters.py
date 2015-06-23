@@ -22,7 +22,7 @@ class use:
 
 # learning rate
 class lr:
-    init = 1e-2 # lr initial value
+    init = 1e-3 # lr initial value
     decay = .95 # lr := lr*decay
     decay_big = .1
     decay_each_epoch = True
