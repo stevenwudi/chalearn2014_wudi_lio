@@ -22,12 +22,12 @@ import theano.tensor as T
 # customized imports
 from dbn.GRBM_DBN import GRBM_DBN
 from conv3d_chalearn import conv3d_chalearn
-from convnet3d import LogRegr
+from convnet3d import LogRegr, HiddenLayer, DropoutLayer
 
 #  modular imports
 # the hyperparameter set the data dir, use etc classes, it's important to modify it according to your need
 from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop,\
-                                     net , files,  DataLoader_with_skeleton
+                                     net,  DataLoader_with_skeleton_normalisation
 from functions.train_functions import _shared, _avg, write, ndtensor, print_params, lin,\
                                       timing_report, training_report, epoch_report, _batch,\
                                       test_lio, save_results, move_results, save_params, test_lio_skel
@@ -95,8 +95,15 @@ SK_normalization = cPickle.load(f)
 Mean1 = SK_normalization ['Mean1']
 Std1 = SK_normalization['Std1']
 
+
+f = open('CNN_normalization.pkl','rb')
+CNN_normalization = cPickle.load(f)
+Mean_CNN = CNN_normalization ['Mean_CNN']
+Std_CNN = CNN_normalization['Std_CNN']
+
+
 # customized data loader for both video module and skeleton module
-loader = DataLoader_with_skeleton(src, tr.batch_size, Mean1, Std1) # Lio changed it to read from HDF5 files
+loader = DataLoader_with_skeleton_normalisation(src, tr.batch_size, Mean_CNN, Std_CNN, Mean1, Std1) # Lio changed it to read from HDF5 files
 
 ####################################################################
 # DBN for skeleton modules
@@ -128,14 +135,29 @@ out = T.concatenate([video_cnn.out, dbn.sigmoid_layers[-1].output], axis=1)
 insp =  []
 for insp_temp in video_cnn.insp:    insp.append(insp_temp)
 for layer in dbn.sigmoid_layers:    insp.append(T.mean(layer.output))
-insp = T.stack(insp)
 
+
+
+# ------------------------------------------------------------------------------
+#MLP layer
+
+                    
+layers.append(HiddenLayer(out, n_in=net.hidden, n_out=net.hidden, rng=tr.rng, 
+    W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], activation=net.activation))
+out = layers[-1].output
+
+if tr.inspect: insp.append( T.mean(out))
+if use.drop: out = DropoutLayer(out, rng=tr.rng, p=drop.p_hidden).output
+
+insp = T.stack(insp)
+        
+        
 # softmax layer
-layers.append(LogRegr(out, rng=tr.rng, activation=lin, n_in=net.hidden, 
+layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden, 
     W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
 # number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size
 print 'MLP:', video_cnn.n_in_MLP, "->", net.hidden_penultimate, "+", net.hidden_traj, '->', \
-   net.hidden, '->', net.n_class, ""
+   net.hidden, '->', net.hidden, '->', net.n_class, ""
 
 # cost function
 cost = layers[-1].negative_log_likelihood(y)
@@ -152,6 +174,8 @@ for layer in video_cnn.layers:
 # for calculating the gradient
 params.extend(dbn.params[:-2])
 
+# MLP hidden layer params
+params.extend(layers[-2].params)
 # softmax layer params
 params.extend(layers[-1].params)
 

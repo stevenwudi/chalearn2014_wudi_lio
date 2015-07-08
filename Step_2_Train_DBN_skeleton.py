@@ -48,28 +48,40 @@ def load_CodaLab_skel():
     print '... loading data'
 
     # Wudi hard coded this part.... sorry....
-    src = r"D:\Chalearn2014\Data_processed"
+    #src = r"D:\Chalearn2014\Data_processed"
+    src = "/idiap/user/dwu/chalearn"
     import h5py
     file = h5py.File(src+"/data%d.hdf5", "r", driver="family", memb_size=2**32-1)
   
     Feature_train = file["x_train_skeleton_feature"]
     Target_all = file["y_train"]
-    print Feature_train[0,:100]
-    print Target_all[200:300]
+    #print Feature_train[0,:100]
+    #print Target_all[200:300]
     
     valid_set_feature = file["x_valid_skeleton_feature"]
     valid_set_new_target = file["y_valid"]
     # Wudi added normalized data for GRBM
-    [train_set_feature_normalized, Mean1, Std1]  = preprocessing.scale(Feature_train)
     import cPickle as pickle
+    """
+    [train_set_feature_normalized, Mean1, Std1]  = zero_mean_unit_variance(Feature_train)
     f = open('SK_normalization.pkl','wb')
     pickle.dump( {"Mean1": Mean1, "Std1": Std1 },f)
     f.close()
     train_set_x, train_set_y = shared_dataset( (train_set_feature_normalized, Target_all))
+"""
+    f = open('SK_normalization.pkl','rb')
+    SK_normalisation = cPickle.load(f)
+    Mean1 = SK_normalisation['Mean1']
+    Std1 = SK_normalisation['Std1']
 
+    #Feature_train = numpy.array(Feature_train)
+    Feature_train -= Mean1
+    Feature_train /= Std1
+    
+    train_set_x, train_set_y = shared_dataset( (Feature_train, Target_all))
     valid_set_feature = normalize(valid_set_feature, Mean1, Std1)
     valid_set_x, valid_set_y = shared_dataset((valid_set_feature,valid_set_new_target))
-
+    print "finish loading"
 
     rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y)]
     return rval
