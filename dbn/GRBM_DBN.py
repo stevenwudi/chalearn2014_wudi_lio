@@ -47,11 +47,11 @@ class GRBM_DBN(object):
             self.x = T.matrix('x')  # the data is presented as rasterized images
         else: 
             self.x = input_x
-    if label is None:
+        if label is None:
             self.y = T.ivector('y')  # the labels are presented as 1D vector
-                                 # of [int] labels
-    else:
-        self.y = label
+                                     # of [int] labels
+        else:
+            self.y = label
 
         for i in xrange(self.n_layers):
             if i == 0:
