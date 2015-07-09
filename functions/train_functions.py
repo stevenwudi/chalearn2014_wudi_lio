@@ -191,19 +191,22 @@ def _mini_batch(model, mini_batch, batch, is_train, apply_updates =None ):
     global insp_
     ce = []
     for i in xrange(batch.mini/batch.micro):
-        if not is_train:
-            ce.append(model(mini_batch, i))
-        else:
-            c_,e_,out_mean, out_std = model(mini_batch, i) 
+        c_,e_, out_mean, out_std = model(mini_batch, i) 
         ce.append([c_,e_])
     if is_train: apply_updates()
-    return _avg(ce)
+    return _avg(ce), _avg(out_mean), _avg(out_std)
 
 
 def _batch(model, batch_size, batch, is_train=True, apply_updates=None):
-    ce = []
-    for i in xrange(batch_size/batch.mini): ce.append(_mini_batch(model, i, batch, is_train, apply_updates))
-    return _avg(ce)
+    ce_all = []
+    out_mean_all = []
+    out_std_all = []
+    for i in xrange(batch_size/batch.mini): 
+        ce, out_mean, out_std = (_mini_batch(model, i, batch, is_train, apply_updates))
+        ce_all.append(ce)
+        out_mean_all.append(out_mean)
+        out_std_all.append(out_std)
+    return _avg(ce_all), _avg(out_mean_all), _avg(out_std_all)
 
 
 def training_report(train_ce):
@@ -218,54 +221,6 @@ def epoch_report(epoch, best_valid, time_used, lr, train_ce, valid_ce, res_dir):
         train_ce[0], train_ce[1]*100., valid_ce[0], valid_ce[1]*100.,best_valid*100.)
 
     write(result_string, res_dir)
-
-def test(files_, use, test_model, batch, drop, rng, epoch, batch_size, x_, y_):
-    global jobs
-    if use.drop: # dont use dropout when testing
-        #drop.p_traj.set_value(float32(0.)) 
-        drop.p_vid.set_value(float32(0.)) 
-        drop.p_hidden.set_value(float32(0.)) 
-    ce = []
-    first_test_file = True
-    for file in files_:
-        if first_test_file:
-            augm = False
-            first_test_file = False
-        else: augm = True
-        load_data(file, rng, epoch, batch_size, x_, y_)
-        #load_data(file,  rng, epoch)
-        ce.append(_batch(test_model, batch_size, batch, is_train=False))
-    if use.drop: # reset dropout
-        #drop.p_traj.set_value(drop.p_traj_val) 
-        drop.p_vid.set_value(drop.p_vid_val) 
-        drop.p_hidden.set_value(drop.p_hidden_val)
-    # start_load(files.train,augm=use.aug)
-    return _avg(ce)
-
-
-def test_lio(use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, loader):
-    global jobs
-    if use.drop: # dont use dropout when testing
-        #drop.p_traj.set_value(float32(0.)) 
-        drop.p_vid.set_value(float32(0.)) 
-        drop.p_hidden.set_value(float32(0.)) 
-    ce = []
-    first_test_file = True
-    for i in range(loader.n_iter_valid):
-        if first_test_file:
-            augm = False
-            first_test_file = False
-        else: augm = True
-        # load_data(file, rng, epoch, batch_size, x_, y_)
-        loader.next_valid_batch(x_, y_)
-        #load_data(file,  rng, epoch)
-        ce.append(_batch(test_model, batch_size, batch, is_train=False))
-    if use.drop: # reset dropout
-        #drop.p_traj.set_value(drop.p_traj_val) 
-        drop.p_vid.set_value(drop.p_vid_val) 
-        drop.p_hidden.set_value(drop.p_hidden_val)
-    # start_load(files.train,augm=use.aug)
-    return _avg(ce)
 
 def test_lio_skel(use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, loader, x_skeleton_):
     global jobs
@@ -283,7 +238,8 @@ def test_lio_skel(use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, 
         # load_data(file, rng, epoch, batch_size, x_, y_)
         loader.next_valid_batch(x_, y_, x_skeleton_)
         #load_data(file,  rng, epoch)
-        ce.append(_batch(test_model, batch_size, batch, is_train=False))
+        ce_temp, out_mean_temp, out_std_temp = _batch(test_model, batch_size, batch, is_train=False)
+        ce.append(ce_temp)
     if use.drop: # reset dropout
         #drop.p_traj.set_value(drop.p_traj_val) 
         drop.p_vid.set_value(drop.p_vid_val) 
@@ -292,7 +248,7 @@ def test_lio_skel(use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, 
     return _avg(ce)
 
 
-def save_results(train_ce, valid_ce, res_dir, params=None):
+def save_results(train_ce, valid_ce, res_dir, params=None, out_mean_train=None, out_std_train=None):
     if len(valid_ce)==0: rate = 0
     else: rate = valid_ce[-1][1]
     dst = res_dir.split("/")
@@ -311,6 +267,11 @@ def save_results(train_ce, valid_ce, res_dir, params=None):
     ce = (train_ce, valid_ce)
     with open(res_dir+"/cost_error.txt","wb") as f: f.write(str(ce)+"\n")
     dump(ce, open(res_dir+"/cost_error.p", "wb"), -1)
+
+    if out_std_train is not None:
+    	inspection = (out_mean_train, out_std_train)
+    	with open(res_dir+"/inspection.txt","wb") as f: f.write(str(inspection)+"\n")
+    	dump(inspection, open(res_dir+"/inspection.p", "wb"), -1)
     return res_dir
 
 def move_results(res_dir):

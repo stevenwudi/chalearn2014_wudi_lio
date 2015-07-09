@@ -67,6 +67,7 @@ class tr:
 
 # dropout
 class drop:
+    p_traj = float32(0.5)
     p_vid_val = float32(0.5) # dropout on vid
     p_hidden_val = float32(0.5) # dropout on hidden units
 

@@ -244,6 +244,7 @@ class GRBM_DBN(object):
             #print param_load[load_params_pos].shape
             p.set_value(param_load[load_params_pos], borrow=True)
             load_params_pos += 1 
+        print "finish loading dbn parameters"
 
 
 def test_GRBM_DBN(finetune_lr=0.2, pretraining_epochs=1,

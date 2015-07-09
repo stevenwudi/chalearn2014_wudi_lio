@@ -13,7 +13,8 @@ from time import time, localtime
 from gzip import GzipFile
 import os
 # numpy imports
-from numpy import zeros, empty, inf, float32, random, linspace
+from numpy import zeros, empty, inf, float32, random
+
 # theano imports
 from theano import function, config, shared
 import theano.tensor as T
@@ -21,17 +22,25 @@ import theano.tensor as T
 # customized imports
 from dbn.GRBM_DBN import GRBM_DBN
 from conv3d_chalearn import conv3d_chalearn
-from convnet3d import LogRegr
+from convnet3d import LogRegr, HiddenLayer, DropoutLayer
 
 #  modular imports
 # the hyperparameter set the data dir, use etc classes, it's important to modify it according to your need
 from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop,\
                                      net,  DataLoader_with_skeleton_normalisation
 from functions.train_functions import _shared, _avg, write, ndtensor, print_params, lin,\
-                                      training_report, epoch_report, _batch,\
-                                      save_results, move_results, save_params, test_lio_skel
+                                      timing_report, training_report, epoch_report, _batch,\
+                                      test_lio, save_results, move_results, save_params, test_lio_skel
 
+# we need to parse an absolute path for HPC to load
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument('path')
+args = parser.parse_args()
+load_path = args.path
+
+print load_path
 ####################################################################
 ####################################################################
 print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
@@ -39,17 +48,12 @@ print "\n%s\n\t initializing \n%s"%(('-'*30,)*2)
 ####################################################################
 # source and result directory
 pc = "wudi"
-pc = "wudi_linux"
 if pc=="wudi":
-    src = r"D:\Chalearn2014\Data_processed"
-    res_dir_ = r"D:\Chalearn2014\result"# dir of original data -- note that wudi has decompressed it!!!
-elif pc == "wudi_linux":
     src = r"/idiap/user/dwu/chalearn/"
     res_dir_ = r"/idiap/user/dwu/chalearn/result/"# dir of original data -- note that wudi has decompressed it!!!
 elif pc=="lio":
     src = "/mnt/wd/chalearn/preproc"
     res_dir_ = "/home/lpigou/chalearn_wudi/try"
-
 
 lt = localtime()
 res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
@@ -58,6 +62,9 @@ res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
 os.makedirs(res_dir)
 #  global variables/constants
 # ------------------------------------------------------------------------------
+if False:
+    import theano 
+    theano.config.compute_test_value = 'warn' #debug mode
 params = [] # all neural network parameters
 layers = [] # all architecture layers
 mini_updates = []
@@ -81,17 +88,23 @@ x_ = _shared(empty(tr.in_shape))
 y_ = _shared(empty(tr.batch_size))
 y_int32 = T.cast(y_,'int32')
 
-
-# load the skeleton normalisation --Lio didn't normalise video input, but should we?
+# in shape: #frames * gray/depth * body/hand * 4 maps
 import cPickle
-f = open('SK_normalization.pkl','rb')
+f = open(os.path.join(load_path, 'SK_normalization.pkl'),'rb')
 SK_normalization = cPickle.load(f)
 Mean1 = SK_normalization ['Mean1']
 Std1 = SK_normalization['Std1']
 
+
+f = open('CNN_normalization.pkl','rb')
+CNN_normalization = cPickle.load(f)
+Mean_CNN = CNN_normalization ['Mean_CNN']
+Std_CNN = CNN_normalization['Std_CNN']
+
+
 # customized data loader for both video module and skeleton module
-#loader = DataLoader_with_skeleton(src, tr.batch_size, Mean1, Std1) # Lio changed it to read from HDF5 files
-loader = DataLoader_with_skeleton_normalisation(src, tr.batch_size, 0, 1, Mean1, Std1) # Lio changed it to read from HDF5 files
+loader = DataLoader_with_skeleton_normalisation(src, tr.batch_size, Mean_CNN, Std_CNN, Mean1, Std1) # Lio changed it to read from HDF5 files
+
 ####################################################################
 # DBN for skeleton modules
 #################################################################### 
@@ -100,29 +113,72 @@ loader = DataLoader_with_skeleton_normalisation(src, tr.batch_size, 0, 1, Mean1,
 x_skeleton = ndtensor(len(tr._skeleon_in_shape))(name = 'x_skeleton') # video input
 x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
-
 dbn = GRBM_DBN(numpy_rng=random.RandomState(123), n_ins=891, \
                 hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input_x=x_skeleton, label=y )  
-# we load the pretrained DBN skeleton parameteres here, currently pretraining is done
-# unsupervisedly, we can load the supervised pretrainining parameters later
-                
-dbn.load_params_DBN("/idiap/user/dwu/chalearn/result/try/37.8% 2015.07.09.13.26.11/paramsbest.zip")  
+# we load the pretrained DBN skeleton parameteres here
+dbn.load(os.path.join(load_path,'dbn_2015-06-19-11-34-24.npy'))
 
 
-cost = dbn.finetune_cost
+####################################################################
+# 3DCNN for video module
+#################################################################### 
+# we load the CNN parameteres here
+use.load = True
+
+video_cnn = conv3d_chalearn(x, use, lr, batch, net, reg, drop, mom, tr, res_dir, load_path)
+
+#####################################################################
+# fuse the ConvNet output with skeleton output  -- need to change here
+######################################################################  
+out = T.concatenate([video_cnn.out, dbn.sigmoid_layers[-1].output], axis=1)
+
+# some activation inspection
+insp =  []
+for insp_temp in video_cnn.insp:    insp.append(insp_temp)
+for layer in dbn.sigmoid_layers:    insp.append(T.mean(layer.output))
+
+# ------------------------------------------------------------------------------
+#MLP layer                
+layers.append(HiddenLayer(out, n_in=net.hidden, n_out=net.hidden, rng=tr.rng, 
+    W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], activation=net.activation))
+out = layers[-1].output
+
+if tr.inspect: insp.append( T.mean(out))
+if use.drop: out = DropoutLayer(out, rng=tr.rng, p=drop.p_hidden).output
+
+insp = T.stack(insp)
+       
+# softmax layer
+layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden, 
+    W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
+# number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size
+print 'MLP:', video_cnn.n_in_MLP, "->", net.hidden_penultimate, "+", net.hidden_traj, '->', \
+   net.hidden, '->', net.hidden, '->', net.n_class, ""
+
+# cost function
+cost = layers[-1].negative_log_likelihood(y)
 
 # function computing the number of errors
-errors = dbn.errors
+errors = layers[-1].errors(y)
 
+# gradient descent
+# parameter list
+for layer in video_cnn.layers: 
+    params.extend(layer.params)
 
-# wudi add the mean and standard deviation of the activation values to exam the neural net
-# Reference: Understanding the difficulty of training deep feedforward neural networks, Xavier Glorot, Yoshua Bengio
-out_mean = T.stack(dbn.out_mean)
-out_std = T.stack(dbn.out_std)
+# pre-trained dbn parameter last layer  (W, b) doesn't need to incorporate into the params
+# for calculating the gradient
+print len(dbn.params)
+params.extend(dbn.params[:-2])
 
+# MLP hidden layer params
+params.extend(layers[-2].params)
+# softmax layer params
+params.extend(layers[-1].params)
 
-gparams = T.grad(cost, dbn.params)
-params = dbn.params
+# gradient list
+gparams = T.grad(cost, params)
+
 
 def get_update(i): return update[i]/(batch.mini/batch.micro)
 
@@ -154,32 +210,33 @@ print "\n%s\n\tcompiling\n%s"%(('-'*30,)*2)
 #################################################################### 
 # compile functions
 # ------------------------------------------------------------------------------
-def get_batch(_data): 
-    pos_mini = idx_mini*batch.mini
-    idx1 = pos_mini + idx_micro*batch.micro
-    idx2 = pos_mini + (idx_micro+1)*batch.micro
-    return _data[idx1:idx2]
+if True:
+    def get_batch(_data): 
+        pos_mini = idx_mini*batch.mini
+        idx1 = pos_mini + idx_micro*batch.micro
+        idx2 = pos_mini + (idx_micro+1)*batch.micro
+        return _data[idx1:idx2]
 
-def givens(dataset_):
-    return {x: get_batch(dataset_[0]),
-            y: get_batch(dataset_[1]),
-            x_skeleton: get_batch(dataset_[2])}
+    def givens(dataset_):
+        return {x: get_batch(dataset_[0]),
+                y: get_batch(dataset_[1]),
+                x_skeleton: get_batch(dataset_[2])}
 
-print 'compiling apply_updates'
-apply_updates = function([], 
-    updates=mini_updates, 
-    on_unused_input='ignore')
+    print 'compiling apply_updates'
+    apply_updates = function([], 
+        updates=mini_updates, 
+        on_unused_input='ignore')
 
-print 'compiling train_model'
-train_model = function([idx_mini, idx_micro], [cost, errors, out_mean, out_std], 
-    updates=micro_updates, 
-    givens=givens((x_, y_int32, x_skeleton_)),
-    on_unused_input='ignore')
+    print 'compiling train_model'
+    train_model = function([idx_mini, idx_micro], [cost, errors], 
+        updates=micro_updates, 
+        givens=givens((x_, y_int32, x_skeleton_)), 
+        on_unused_input='ignore')
 
-print 'compiling test_model'
-test_model = function([idx_mini, idx_micro], [cost, errors, out_mean, out_std], 
-    givens=givens((x_, y_int32, x_skeleton_)),
-    on_unused_input='ignore')
+    print 'compiling test_model'
+    test_model = function([idx_mini, idx_micro], [cost, errors], 
+        givens=givens((x_, y_int32, x_skeleton_)),
+        on_unused_input='ignore')
 
 ####################################################################
 ####################################################################
@@ -193,7 +250,6 @@ best_valid = inf
 lr_decay_epoch = 0
 n_lr_decays = 0
 train_ce, valid_ce = [], []
-out_mean_all, out_std_all = [], []
 flag=True
 global insp_
 insp_ = None
@@ -202,15 +258,9 @@ res_dir = save_results(train_ce, valid_ce, res_dir, params=params)
 
 save_params(params, res_dir)
 
-# Wudi makes thie to explicity control the learning rate
-
-learning_rate_map = linspace(lr.start, lr.stop, tr.n_epochs)
-
 
 for epoch in xrange(tr.n_epochs):
     ce = []
-    out_mean_train = []
-    out_std_train = []
     print_params(params) 
     ####################################################################
     ####################################################################
@@ -222,15 +272,11 @@ for epoch in xrange(tr.n_epochs):
         #load data
         time_start_iter = time()
         loader.next_train_batch(x_, y_, x_skeleton_)
-        #tr.batch_size = y_.get_value(borrow=True).shape[0]
-        ce_temp, out_mean_temp, out_std_temp = _batch(train_model, tr.batch_size, batch, True, apply_updates)
-	#print out_mean_train, out_std_train
-        ce.append(ce_temp)
-        out_mean_train.append(out_mean_temp)
-	out_std_train.append(out_std_temp)
-
-        print "Training: No.%d iter of Total %d, %d s"% (i,loader.n_iter_train, time()-time_start_iter)  \
-                + "\t| negative_log_likelihood "+ training_report(ce[-1]) 
+        tr.batch_size = y_.get_value(borrow=True).shape[0]
+        ce.append(_batch(train_model, tr.batch_size, batch, True, apply_updates))
+       
+        timing_report(i, time()-time_start_iter, tr.batch_size, res_dir)
+        print "\t| "+ training_report(ce[-1]) + ", finish total of: 0." + str(i*1.0/loader.n_iter_train)
     # End of Epoch
     ####################################################################
     ####################################################################
@@ -238,14 +284,14 @@ for epoch in xrange(tr.n_epochs):
         %('-'*30, epoch, '-'*30)
     ####################################################################
     ####################################################################
+    # print insp_
     train_ce.append(_avg(ce))
-    out_mean_all.append(_avg(out_mean_train))
-    out_std_all.append(_avg(out_std_train))
     # validate
     valid_ce.append(test_lio_skel(use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_, loader, x_skeleton_))
 
     # save best params
-    res_dir = save_results(train_ce, valid_ce, res_dir, params=params, out_mean_train=out_mean_all,out_std_train=out_std_all)
+    # if valid_ce[-1][1] < 0.25:
+    res_dir = save_results(train_ce, valid_ce, res_dir, params=params)
     if not tr.moved: res_dir = move_results(res_dir)
 
     if valid_ce[-1][1] < best_valid:
@@ -258,10 +304,25 @@ for epoch in xrange(tr.n_epochs):
     # epoch report
     epoch_report(epoch, best_valid, time()-time_start, learning_rate.get_value(borrow=True),\
         train_ce[-1], valid_ce[-1], res_dir)
+    # make_plot(train_ce, valid_ce)
 
-    # decay the learning rate
-    learning_rate.set_value(float32(learning_rate_map[epoch]))
+    if lr.decay_each_epoch:
+        learning_rate.set_value(float32(learning_rate.get_value(borrow=True)*lr.decay))
+    # elif lr.decay_if_plateau:
+    #     if epoch - lr_decay_epoch > tr.patience \
+    #         and valid_ce[-1-tr.patience][1] <= valid_ce[-1][1]:
+
+    #         write("Learning rate decay: validation error stopped improving")
+    #         lr_decay_epoch = epoch
+    #         n_lr_decays +=1
+    #         learning_rate.set_value(float32(learning_rate.get_value(borrow=True)*lr.decay_big))
+    # if epoch == 0: 
+        # learning_rate.set_value(float32(3e-4))
+    # else:
+        # learning_rate.set_value(float32(learning_rate.get_value(borrow=True)*lr.decay))
     loader.shuffle_train()
+
+
 
 
 
