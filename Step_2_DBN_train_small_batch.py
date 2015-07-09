@@ -114,6 +114,13 @@ cost = dbn.finetune_cost
 # function computing the number of errors
 errors = dbn.errors
 
+
+# wudi add the mean and standard deviation of the activation values to exam the neural net
+# Reference: Understanding the difficulty of training deep feedforward neural networks, Xavier Glorot, Yoshua Bengio
+out_mean = dbn.out_mean
+out_std = dbn.out_std
+
+
 gparams = T.grad(cost, dbn.params)
 params = dbn.params
 
@@ -164,7 +171,7 @@ apply_updates = function([],
     on_unused_input='ignore')
 
 print 'compiling train_model'
-train_model = function([idx_mini, idx_micro], [cost, errors], 
+train_model = function([idx_mini, idx_micro], [cost, errors, out_mean, out_std], 
     updates=micro_updates, 
     givens=givens((x_, y_int32, x_skeleton_)), 
     on_unused_input='ignore')

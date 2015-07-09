@@ -194,9 +194,8 @@ def _mini_batch(model, mini_batch, batch, is_train, apply_updates =None ):
         if not is_train:
             ce.append(model(mini_batch, i))
         else:
-            #c_,e_,insp_ = model(mini_batch, i) 
-	    c_,e_= model(mini_batch, i) 
-            ce.append([c_,e_])
+            c_,e_,out_mean, out_std = model(mini_batch, i) 
+        ce.append([c_,e_])
     if is_train: apply_updates()
     return _avg(ce)
 

@@ -32,6 +32,11 @@ class GRBM_DBN(object):
         self.params = []
         self.n_layers = len(hidden_layers_sizes)
 
+        # wudi add the mean and standard deviation of the activation values to exam the neural net
+        # Reference: Understanding the difficulty of training deep feedforward neural networks, Xavier Glorot, Yoshua Bengio
+        self.out_mean = []
+        self.out_std = []
+
         assert self.n_layers > 0
         if not theano_rng:
             theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
@@ -42,11 +47,11 @@ class GRBM_DBN(object):
             self.x = T.matrix('x')  # the data is presented as rasterized images
         else: 
             self.x = input_x
-	if label is None:
+    if label is None:
             self.y = T.ivector('y')  # the labels are presented as 1D vector
                                  # of [int] labels
-	else:
-	    self.y = label
+    else:
+        self.y = label
 
         for i in xrange(self.n_layers):
             if i == 0:
@@ -64,6 +69,8 @@ class GRBM_DBN(object):
 
             # add the layer to our list of layers
             self.sigmoid_layers.append(sigmoid_layer)
+            self.out_mean.append(T.mean(sigmoid_layer.output))
+            self.out_std.append(T.std(sigmoid_layer.output))
 
             self.params.extend(sigmoid_layer.params)
             # Construct an RBM that shared weights with this layer
