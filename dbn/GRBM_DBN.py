@@ -25,7 +25,7 @@ warnings.filterwarnings("ignore")
 class GRBM_DBN(object):
 
     def __init__(self, numpy_rng, theano_rng=None, n_ins=784,
-                 hidden_layers_sizes=[500, 500], n_outs=10, finetune_lr=0.1, input=[]):
+                 hidden_layers_sizes=[500, 500], n_outs=10, finetune_lr=0.1, input_x=None, label=None):
 
         self.sigmoid_layers = []
         self.rbm_layers = []
@@ -36,12 +36,17 @@ class GRBM_DBN(object):
         if not theano_rng:
             theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
         # allocate symbolic variables for the data
-        if input:
-            self.x = input
-        else :
+        
+            
+        if input_x is None:
             self.x = T.matrix('x')  # the data is presented as rasterized images
-        self.y = T.ivector('y')  # the labels are presented as 1D vector
+        else: 
+            self.x = input_x
+	if label is None:
+            self.y = T.ivector('y')  # the labels are presented as 1D vector
                                  # of [int] labels
+	else:
+	    self.y = label
 
         for i in xrange(self.n_layers):
             if i == 0:
@@ -85,7 +90,7 @@ class GRBM_DBN(object):
 
         # compute the cost for second phase of training, defined as the
         # negative log likelihood of the logistic regression (output) layer
-        self.finetune_cost = self.logLayer.errors(self.y)
+        self.finetune_cost = self.logLayer.negative_log_likelihood(self.y)
 
         # compute the gradients with respect to the model parameters
         # symbolic variable that points to the number of errors made on the
@@ -106,18 +111,12 @@ class GRBM_DBN(object):
 
         # number of batches
         n_batches = train_set_x.get_value(borrow=True).shape[0] / batch_size
-
-        #################################################
-        # Wudi change the here for adapting hdf5 datafile
-        #################################################
-        n_iter_train = int(floor(train_set_x.get_value(borrow=True).shape[0]/float(batch_size)))
-        pos_train =  numpy.array(list(random.permutation(n_iter_train)*batch_size))
-        _shared_pos_train = theano.shared(pos_train)
+        # begining of a batch, given `index`
+        batch_begin = index * batch_size
+        # ending of a batch given `index`
+        batch_end = batch_begin + batch_size
 
         pretrain_fns = []
-
-
-
         for i, rbm in enumerate(self.rbm_layers):
 
             # get the cost and the updates list
@@ -131,7 +130,7 @@ class GRBM_DBN(object):
                                  outputs=cost,
                                  updates=updates,
                                  givens={self.x:
-                                    train_set_x[_shared_pos_train[index]:_shared_pos_train[index]+batch_size ]})
+                                    train_set_x[batch_begin:batch_end]})
             # append `fn` to the list of functions
             pretrain_fns.append(fn)
 
@@ -142,7 +141,6 @@ class GRBM_DBN(object):
         finetuning, a function `validate` that computes the error on a
         batch from the validation set, and a function `test` that
         computes the error on a batch from the testing set
-
         :type datasets: list of pairs of theano.tensor.TensorType
         :param datasets: It is a list that contain all the datasets;
                         the has to contain three pairs, `train`,
@@ -153,13 +151,12 @@ class GRBM_DBN(object):
         :param batch_size: size of a minibatch
         :type learning_rate: float
         :param learning_rate: learning rate used during finetune stage
-
         '''
 
         (train_set_x, train_set_y) = datasets[0]
         (valid_set_x, valid_set_y) = datasets[1]
 
-        
+
         # compute number of minibatches for training, validation and testing
         n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]
         n_valid_batches /= batch_size
@@ -181,20 +178,16 @@ class GRBM_DBN(object):
         for param, gparam in zip(self.params, gparams):
             updates.append((param, param - gparam * self.state_learning_rate.get_value()))
 
-        #################################################
-        # Wudi change the here for adapting hdf5 datafile
-        #################################################
-        n_iter_train = int(floor(train_set_x.get_value(borrow=True).shape[0]/float(batch_size)))
-        pos_train =  numpy.array(list(random.permutation(n_iter_train)*batch_size))
-        _shared_pos_train = theano.shared(pos_train)
+
 
         train_fn = theano.function(inputs=[index],
               outputs=self.finetune_cost,
               updates=updates,
-              givens={self.x: train_set_x[_shared_pos_train[index]:
-                                          _shared_pos_train[index] + batch_size],
-                      self.y: train_set_y[_shared_pos_train[index]:
-                                          _shared_pos_train[index] + batch_size]})
+              givens={self.x: train_set_x[index * batch_size:
+                                          (index + 1) * batch_size],
+                      self.y: train_set_y[index * batch_size:
+                                          (index + 1) * batch_size]})
+
 
         valid_score_i = theano.function([index], self.errors,
               givens={self.x: valid_set_x[index * batch_size:
@@ -205,6 +198,7 @@ class GRBM_DBN(object):
         # Create a function that scans the entire validation set
         def valid_score():
             return [valid_score_i(i) for i in xrange(n_valid_batches)]
+
 
         return train_fn, valid_score
 
@@ -267,9 +261,10 @@ def test_GRBM_DBN(finetune_lr=0.2, pretraining_epochs=1,
     numpy_rng = numpy.random.RandomState(123)
     print '... building the model'
     # construct the Deep Belief Network
+    x_skeleton = T.matrix('x')
     dbn = GRBM_DBN(numpy_rng=numpy_rng, n_ins=28 * 28,
                 hidden_layers_sizes=[1000, 1000, 1000],
-                n_outs=10, finetune_lr=finetune_lr)
+                n_outs=10, finetune_lr=finetune_lr, input=x_skeleton)
 
     #########################
     # PRETRAINING THE MODEL #
@@ -356,7 +351,7 @@ def test_GRBM_DBN(finetune_lr=0.2, pretraining_epochs=1,
 
     # get the training, validation and testing function for the model
     print '... getting the finetuning functions'
-    train_fn, validate_model, test_model = dbn.build_finetune_functions(
+    train_fn, validate_model = dbn.build_finetune_functions(
                 datasets=datasets, batch_size=batch_size,
                 annealing_learning_rate=annealing_learning_rate)
 
@@ -409,13 +404,11 @@ def test_GRBM_DBN(finetune_lr=0.2, pretraining_epochs=1,
                     best_validation_loss = this_validation_loss
                     best_iter = iter
 
-                    # test it on the test set
-                    test_losses = test_model()
-                    test_score = numpy.mean(test_losses)
+
                     print(('     epoch %i, minibatch %i/%i, test error of '
                            'best model %f %%') %
                           (epoch, minibatch_index + 1, n_train_batches,
-                           test_score * 100.))
+                           this_validation_loss * 100.))
 
             if patience <= iter:
                 done_looping = True
@@ -447,7 +440,7 @@ def load_data_grbm(dataset):
     data_dir, data_file = os.path.split(dataset)
     if data_dir == "" and not os.path.isfile(dataset):
         # Check if dataset is in the data directory.
-        new_path = os.path.join(os.path.split(__file__)[0], "..", "data", dataset)
+        new_path = os.path.join(os.path.split(__file__)[0], dataset)
         if os.path.isfile(new_path) or data_file == 'mnist.pkl.gz':
             dataset = new_path
 
@@ -499,7 +492,7 @@ def load_data_grbm(dataset):
 
     # Wudi made it a small set:
     train_set_feature = train_set[0][0:1000,:]
-    [train_set_feature1, Mean1, Std1]  = preprocessing.scale(train_set_feature)
+    [train_set_feature1, Mean1, Std1]  = zero_mean_unit_variance(train_set_feature)
     # Wudi added normalized data for GRBM
     #[train_set_feature2, Mean2, Var2] = zero_mean_unit_variance(train_set_feature)
     train_set_new_target = train_set[1][0:1000]

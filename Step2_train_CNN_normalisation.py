@@ -120,8 +120,6 @@ layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden_vid,
     W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
 
 
-
-
 # function computing the number of errors
 errors = layers[-1].errors(y)
 
@@ -198,7 +196,7 @@ apply_updates = function([],
     on_unused_input='ignore')
 
 print 'compiling train_model'
-train_model = function([idx_mini, idx_micro], [cost, errors, insp], 
+train_model = function([idx_mini, idx_micro], [cost, errors], 
     updates=micro_updates, 
     givens=givens((x_, y_int32, x_skeleton_)), 
     on_unused_input='ignore')
@@ -237,19 +235,17 @@ for epoch in xrange(tr.n_epochs):
     print "\n%s\n\t epoch %d \n%s"%('-'*30, epoch, '-'*30)
     ####################################################################
     ####################################################################
-    for i in range(loader.n_iter_train):
-        time_start = time()
+    time_start = time()
+    for i in range(loader.n_iter_train):     
         #load data
+        time_start_iter = time()
         loader.next_train_batch(x_, y_, x_skeleton_)
-        # print "loading time", time()-time_start
-        # train
         tr.batch_size = y_.get_value(borrow=True).shape[0]
         ce.append(_batch(train_model, tr.batch_size, batch, True, apply_updates))
        
-        if epoch==0: timing_report(i, time()-time_start, tr.batch_size, res_dir)
-        print "\t| "+ training_report(ce[-1])
+        timing_report(i, time()-time_start_iter, tr.batch_size, res_dir)
+        print "\t| "+ training_report(ce[-1]) + ", finish total of: 0." + str(i*1.0/loader.n_iter_train)
     # End of Epoch
-    #-------------------------------
     ####################################################################
     ####################################################################
     print "\n%s\n\t End of epoch %d, \n printing some debug info.\n%s" \
@@ -293,6 +289,8 @@ for epoch in xrange(tr.n_epochs):
     # else:
         # learning_rate.set_value(float32(learning_rate.get_value(borrow=True)*lr.decay))
     loader.shuffle_train()
+
+
 
 
 

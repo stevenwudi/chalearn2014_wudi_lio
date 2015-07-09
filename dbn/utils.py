@@ -21,6 +21,7 @@ def scale_to_unit_interval(ndar, eps=1e-8):
 def zero_mean_unit_variance(Data):
     """ Scales all values in the ndarray ndar to be between 0 and 1 """
     Mean = numpy.mean(Data, axis=0)
+    print Mean.shape
     Data  -=  Mean
 
     Std = numpy.std(Data, axis = 0)

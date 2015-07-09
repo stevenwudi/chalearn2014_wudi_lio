@@ -114,9 +114,10 @@ x_skeleton = ndtensor(len(tr._skeleon_in_shape))(name = 'x_skeleton') # video in
 x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
 dbn = GRBM_DBN(numpy_rng=random.RandomState(123), n_ins=891, \
-                hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input=x_skeleton )  
+                hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input_x=x_skeleton, label=y )  
 # we load the pretrained DBN skeleton parameteres here
-dbn.load(os.path.join(load_path, 'dbn_2015-06-14-09-18-32.npy'))
+dbn.load(os.path.join(load_path,'dbn_2015-06-19-11-34-24.npy'))
+
 
 ####################################################################
 # 3DCNN for video module
@@ -136,12 +137,8 @@ insp =  []
 for insp_temp in video_cnn.insp:    insp.append(insp_temp)
 for layer in dbn.sigmoid_layers:    insp.append(T.mean(layer.output))
 
-
-
 # ------------------------------------------------------------------------------
-#MLP layer
-
-                    
+#MLP layer                
 layers.append(HiddenLayer(out, n_in=net.hidden, n_out=net.hidden, rng=tr.rng, 
     W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], activation=net.activation))
 out = layers[-1].output
@@ -150,8 +147,7 @@ if tr.inspect: insp.append( T.mean(out))
 if use.drop: out = DropoutLayer(out, rng=tr.rng, p=drop.p_hidden).output
 
 insp = T.stack(insp)
-        
-        
+       
 # softmax layer
 layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden, 
     W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
@@ -172,6 +168,7 @@ for layer in video_cnn.layers:
 
 # pre-trained dbn parameter last layer  (W, b) doesn't need to incorporate into the params
 # for calculating the gradient
+print len(dbn.params)
 params.extend(dbn.params[:-2])
 
 # MLP hidden layer params
@@ -231,7 +228,7 @@ if True:
         on_unused_input='ignore')
 
     print 'compiling train_model'
-    train_model = function([idx_mini, idx_micro], [cost, errors, insp], 
+    train_model = function([idx_mini, idx_micro], [cost, errors], 
         updates=micro_updates, 
         givens=givens((x_, y_int32, x_skeleton_)), 
         on_unused_input='ignore')
@@ -270,19 +267,17 @@ for epoch in xrange(tr.n_epochs):
     print "\n%s\n\t epoch %d \n%s"%('-'*30, epoch, '-'*30)
     ####################################################################
     ####################################################################
-    for i in range(loader.n_iter_train):
-        time_start = time()
+    time_start = time()
+    for i in range(loader.n_iter_train):     
         #load data
+        time_start_iter = time()
         loader.next_train_batch(x_, y_, x_skeleton_)
-        # print "loading time", time()-time_start
-        # train
         tr.batch_size = y_.get_value(borrow=True).shape[0]
         ce.append(_batch(train_model, tr.batch_size, batch, True, apply_updates))
        
-        if epoch==0: timing_report(i, time()-time_start, tr.batch_size, res_dir)
-        print "\t| "+ training_report(ce[-1])
+        timing_report(i, time()-time_start_iter, tr.batch_size, res_dir)
+        print "\t| "+ training_report(ce[-1]) + ", finish total of: 0." + str(i*1.0/loader.n_iter_train)
     # End of Epoch
-    #-------------------------------
     ####################################################################
     ####################################################################
     print "\n%s\n\t End of epoch %d, \n printing some debug info.\n%s" \
@@ -326,6 +321,8 @@ for epoch in xrange(tr.n_epochs):
     # else:
         # learning_rate.set_value(float32(learning_rate.get_value(borrow=True)*lr.decay))
     loader.shuffle_train()
+
+
 
 
 
