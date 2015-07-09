@@ -207,27 +207,16 @@ def _batch(model, batch_size, batch, is_train=True, apply_updates=None):
     return _avg(ce)
 
 
-def timing_report(file_num, train_time, batch_size, res_dir):
-    global first_report
-    r = "Training: No.%d file, %d s"% (file_num, train_time) 
-    first_report = False
-    # write(r, res_dir)
-    print "%ds"%(train_time),
-
 def training_report(train_ce):
     return "%5.3f %5.2f" % (train_ce[0], train_ce[1]*100.)
 
-def epoch_report(epoch, best_valid, time_used, lr, train_ce, valid_ce, res_dir, valid2_ce=None):
+def epoch_report(epoch, best_valid, time_used, lr, train_ce, valid_ce, res_dir):
     result_string = """ 
     epoch %i: %.2f m since start, LR %.2e
     train_cost: %.3f, train_err: %.3f
     val_cost: %.3f, val_err: %.3f, best: %.3f""" % \
     (epoch, time_used / 60., lr, 
         train_ce[0], train_ce[1]*100., valid_ce[0], valid_ce[1]*100.,best_valid*100.)
-
-    if valid2_ce:
-        result_string += "\n\tvalidation2_cost: %.3f, validation2_error: %.3f"%\
-        (valid2_ce[0], valid2_ce[1]*100.)
 
     write(result_string, res_dir)
 
@@ -304,7 +293,7 @@ def test_lio_skel(use, test_model, batch, drop, rng, epoch, batch_size, x_, y_, 
     return _avg(ce)
 
 
-def save_results(train_ce, valid_ce, res_dir, valid2_ce=None, params=None):
+def save_results(train_ce, valid_ce, res_dir, params=None):
     if len(valid_ce)==0: rate = 0
     else: rate = valid_ce[-1][1]
     dst = res_dir.split("/")
@@ -320,8 +309,7 @@ def save_results(train_ce, valid_ce, res_dir, valid2_ce=None, params=None):
     file = GzipFile(res_dir+"/params.zip", 'wb')
     dump(params, file, -1)
     file.close()
-    if valid2_ce: ce = (train_ce, valid_ce, valid2_ce)
-    else: ce = (train_ce, valid_ce)
+    ce = (train_ce, valid_ce)
     with open(res_dir+"/cost_error.txt","wb") as f: f.write(str(ce)+"\n")
     dump(ce, open(res_dir+"/cost_error.p", "wb"), -1)
     return res_dir

@@ -50,6 +50,7 @@ Temporary Items
 *.sln
 *.suo
 *.spyderproject
+*.spyderworkspace
 *.eps
 *.jpg
 

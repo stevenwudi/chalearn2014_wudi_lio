@@ -13,8 +13,7 @@ from time import time, localtime
 from gzip import GzipFile
 import os
 # numpy imports
-from numpy import zeros, empty, inf, float32, random
-
+from numpy import zeros, empty, inf, float32, random, linspace
 # theano imports
 from theano import function, config, shared
 import theano.tensor as T
@@ -27,9 +26,9 @@ from convnet3d import LogRegr
 #  modular imports
 # the hyperparameter set the data dir, use etc classes, it's important to modify it according to your need
 from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop,\
-                                     net,  DataLoader_with_skeleton, DataLoader_with_skeleton_normalisation
+                                     net,  DataLoader_with_skeleton_normalisation
 from functions.train_functions import _shared, _avg, write, ndtensor, print_params, lin,\
-                                      timing_report, training_report, epoch_report, _batch,\
+                                      training_report, epoch_report, _batch,\
                                       test_lio, save_results, move_results, save_params, test_lio_skel
 
 
@@ -59,9 +58,6 @@ res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
 os.makedirs(res_dir)
 #  global variables/constants
 # ------------------------------------------------------------------------------
-if False:
-    import theano 
-    theano.config.compute_test_value = 'warn' #debug mode
 params = [] # all neural network parameters
 layers = [] # all architecture layers
 mini_updates = []
@@ -109,7 +105,9 @@ dbn = GRBM_DBN(numpy_rng=random.RandomState(123), n_ins=891, \
                 hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input_x=x_skeleton, label=y )  
 # we load the pretrained DBN skeleton parameteres here, currently pretraining is done
 # unsupervisedly, we can load the supervised pretrainining parameters later
-dbn.load('dbn_2015-06-19-11-34-24.npy')  
+                
+dbn.load_params_DBN("/idiap/user/dwu/chalearn/result/try/43.5% 2015.07.09.00.32.32/paramsbest.zip")  
+
 
 cost = dbn.finetune_cost
 
@@ -196,6 +194,10 @@ res_dir = save_results(train_ce, valid_ce, res_dir, params=params)
 
 save_params(params, res_dir)
 
+# Wudi makes thie to explicity control the learning rate
+
+learning_rate_map = linspace(lr.start, lr.stop, tr.n_epochs)
+
 
 for epoch in xrange(tr.n_epochs):
     ce = []
@@ -210,11 +212,11 @@ for epoch in xrange(tr.n_epochs):
         #load data
         time_start_iter = time()
         loader.next_train_batch(x_, y_, x_skeleton_)
-        tr.batch_size = y_.get_value(borrow=True).shape[0]
+        #tr.batch_size = y_.get_value(borrow=True).shape[0]
         ce.append(_batch(train_model, tr.batch_size, batch, True, apply_updates))
-       
-        timing_report(i, time()-time_start_iter, tr.batch_size, res_dir)
-        print "\t| "+ training_report(ce[-1]) + ", finish total of: 0." + str(i*1.0/loader.n_iter_train)
+
+        print "Training: No.%d iter of Total %d, %d s"% (i,loader.n_iter_train, time()-time_start_iter)  \
+                + "\t| negative_log_likelihood "+ training_report(ce[-1]) 
     # End of Epoch
     ####################################################################
     ####################################################################
@@ -242,22 +244,9 @@ for epoch in xrange(tr.n_epochs):
     # epoch report
     epoch_report(epoch, best_valid, time()-time_start, learning_rate.get_value(borrow=True),\
         train_ce[-1], valid_ce[-1], res_dir)
-    # make_plot(train_ce, valid_ce)
 
-    if lr.decay_each_epoch:
-        learning_rate.set_value(float32(learning_rate.get_value(borrow=True)*lr.decay))
-    # elif lr.decay_if_plateau:
-    #     if epoch - lr_decay_epoch > tr.patience \
-    #         and valid_ce[-1-tr.patience][1] <= valid_ce[-1][1]:
-
-    #         write("Learning rate decay: validation error stopped improving")
-    #         lr_decay_epoch = epoch
-    #         n_lr_decays +=1
-    #         learning_rate.set_value(float32(learning_rate.get_value(borrow=True)*lr.decay_big))
-    # if epoch == 0: 
-        # learning_rate.set_value(float32(3e-4))
-    # else:
-        # learning_rate.set_value(float32(learning_rate.get_value(borrow=True)*lr.decay))
+    # decay the learning rate
+    learning_rate.set_value(float32(learning_rate_map[epoch]))
     loader.shuffle_train()
 
 

@@ -28,6 +28,9 @@ class lr:
     decay_big = .1
     decay_each_epoch = True
     decay_if_plateau = True
+    start = 0.01
+    stop = 0.0001    
+    
 
 class batch:
     mini = 64 # number of samples before updating params

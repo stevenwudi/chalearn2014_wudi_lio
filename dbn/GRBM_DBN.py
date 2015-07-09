@@ -222,6 +222,21 @@ class GRBM_DBN(object):
 
     def load(self, filename):
         self.updateparams(numpy.load(filename))
+        
+    def load_params_DBN(self, load_file=""):
+        import os
+        from gzip import GzipFile
+        from cPickle import dump, load
+        if os.path.isfile(load_file):
+            file = GzipFile(load_file, "rb")
+        param_load = load(file)
+        file.close()
+        load_params_pos = 0
+        for p in self.params:
+            #print p.get_value().shape
+            #print param_load[load_params_pos].shape
+            p.set_value(param_load[load_params_pos], borrow=True)
+            load_params_pos += 1 
 
 
 def test_GRBM_DBN(finetune_lr=0.2, pretraining_epochs=1,
