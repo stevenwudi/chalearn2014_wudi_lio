@@ -226,6 +226,7 @@ res_dir = save_results(train_ce, valid_ce, res_dir, params=params)
 
 save_params(params, res_dir)
 
+lr.decay = 1
 
 for epoch in xrange(tr.n_epochs):
     ce = []
