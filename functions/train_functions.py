@@ -188,14 +188,16 @@ def print_params(params):
 
 
 def _mini_batch(model, mini_batch, batch, is_train, apply_updates =None ):
-    global insp_
     ce = []
     for i in xrange(batch.mini/batch.micro):
         c_,e_, out_mean, out_std = model(mini_batch, i) 
         ce.append([c_,e_])
-    if is_train: apply_updates()
-    return _avg(ce), _avg(out_mean), _avg(out_std)
-
+    if is_train: 
+        apply_updates()
+    #print ce, out_mean
+    #print type(ce), type(out_mean), type(out_std)
+    #return _avg(ce), _avg(out_mean), _avg(out_std)
+    return _avg(ce), out_mean, out_std
 
 def _batch(model, batch_size, batch, is_train=True, apply_updates=None):
     ce_all = []

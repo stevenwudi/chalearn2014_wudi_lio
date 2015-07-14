@@ -1,6 +1,6 @@
 # numpy imports
 from numpy import zeros, empty, inf, float32, random
-import cPickle
+import cPickle, os
 
 # modular imports
 # the hyperparameter set the data dir, use etc classes, it's important to modify it according to your need
@@ -8,8 +8,8 @@ from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop,\
                                      net,  DataLoader_with_skeleton_normalisation
 
 from functions.train_functions import _shared, _avg, write, ndtensor, print_params, lin,\
-                                      timing_report, training_report, epoch_report, _batch,\
-                                      test_lio, save_results, move_results, save_params, test_lio_skel
+                                      training_report, epoch_report, _batch,\
+                                      save_results, move_results, save_params, test_lio_skel
 
 # theano imports
 from theano import function, config, shared
@@ -36,17 +36,14 @@ class convnet3d_grbm_early_fusion():
         # symbolic variables
         self.x_skeleton = ndtensor(len(tr._skeleon_in_shape))(name = 'x_skeleton') # video input
 
-        # load normalisation constant given load_path
-        Mean_skel, Std_skel, Mean_CNN, Std_CNN = load_normalisation_constant(load_path)
-        loader = DataLoader_with_skeleton_normalisation(src, tr.batch_size, \
-                         Mean_CNN, Std_CNN, Mean_skel, Std_skel) # Lio changed it to read from HDF5 files
-
-        
+        if use.mom: 
+            drop.p_vid = shared(float32(drop.p_vid_val) )
+            drop.p_hidden = shared(float32(drop.p_hidden_val))
         video_cnn = conv3d_chalearn(self.x, use, lr, batch, net, reg, drop, mom, \
                                              tr, res_dir, load_path)
 
         dbn = GRBM_DBN(numpy_rng=random.RandomState(123), n_ins=891, \
-                hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input_x=self.x_skeleton, label=y ) 
+                hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input_x=self.x_skeleton, label=self.y ) 
         # we load the pretrained DBN skeleton parameteres here
         if use.load == True: dbn.load(os.path.join(load_path,'dbn_2015-06-19-11-34-24.npy'))
 
@@ -60,22 +57,26 @@ class convnet3d_grbm_early_fusion():
         # wudi add the mean and standard deviation of the activation values to exam the neural net
         # Reference: Understanding the difficulty of training deep feedforward neural networks, Xavier Glorot, Yoshua Bengio
         #####################################################################
-        self.insp_mean = T.stack(dbn.out_mean, video_cnn.insp_mean )
-        self.insp_std = T.stack(dbn.out_std, video_cnn.insp_std)
+        insp_mean_list = []
+        insp_std_list = []
+        insp_mean_list.extend(dbn.out_mean)
+        insp_mean_list.extend(video_cnn.insp_mean)
+        insp_std_list.extend(dbn.out_std)
+        insp_std_list.extend(video_cnn.insp_std)
 
         ######################################################################
         #MLP layer                
         self.layers.append(HiddenLayer(out, n_in=net.hidden, n_out=net.hidden, rng=tr.rng, 
             W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], activation=net.activation))
-        out = layers[-1].output
+        out = self.layers[-1].output
 
         if tr.inspect: 
-            self.insp_mean.append(T.mean(out))
-            self.insp_std.append(T.std(out))
+            insp_mean_list.extend([T.mean(out)])
+            insp_std_list.extend([T.std(out)])
+        self.insp_mean = T.stacklists(insp_mean_list)
+        self.insp_std = T.stacklists(insp_std_list)
 
-        if use.mom: 
-            drop.p_vid = shared(float32(drop.p_vid_val) )
-            drop.p_hidden = shared(float32(drop.p_hidden_val))
+
         if use.drop: out = DropoutLayer(out, rng=tr.rng, p=drop.p_hidden).output
 
         ######################################################################
@@ -86,10 +87,10 @@ class convnet3d_grbm_early_fusion():
 
         ######################################################################
         # cost function
-        self.cost = layers[-1].negative_log_likelihood(self.y)
+        self.cost = self.layers[-1].negative_log_likelihood(self.y)
 
         # function computing the number of errors
-        self.errors = layers[-1].errors(self.y)
+        self.errors = self.layers[-1].errors(self.y)
 
         # parameter list
         for layer in video_cnn.layers: 
@@ -97,13 +98,12 @@ class convnet3d_grbm_early_fusion():
 
         # pre-trained dbn parameter last layer  (W, b) doesn't need to incorporate into the params
         # for calculating the gradient
-        print len(dbn.params)
         self.params.extend(dbn.params[:-2])
 
         # MLP hidden layer params
-        self.params.extend(layers[-2].params)
+        self.params.extend(self.layers[-2].params)
         # softmax layer params
-        self.params.extend(layers[-1].params)
+        self.params.extend(self.layers[-1].params)
         # number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size
         print 'MLP:', video_cnn.n_in_MLP, "->", net.hidden_penultimate, "+", net.hidden_traj, '->', \
            net.hidden, '->', net.hidden, '->', net.n_class, ""
@@ -133,7 +133,9 @@ class convnet3d_grbm_early_fusion():
         gparams = T.grad(self.cost, self.params)
         # compute list of fine-tuning updates
         mini_updates = []
+        micro_updates = []
         update = []
+        last_upd = []
 
         # shared variables
         learning_rate = shared(float32(lr.init))
@@ -164,14 +166,14 @@ class convnet3d_grbm_early_fusion():
 
         def get_batch(_data): 
             pos_mini = self.idx_mini*batch.mini
-            idx1 = pos_mini + idx_micro*batch.micro
-            idx2 = pos_mini + (idx_micro+1)*batch.micro
+            idx1 = pos_mini + self.idx_micro*batch.micro
+            idx2 = pos_mini + (self.idx_micro+1)*batch.micro
             return _data[idx1:idx2]
 
         def givens(dataset_):
-            return {x: get_batch(dataset_[0]),
-                    y: get_batch(dataset_[1]),
-                    x_skeleton: get_batch(dataset_[2])}
+            return {self.x: get_batch(dataset_[0]),
+                    self.y: get_batch(dataset_[1]),
+                    self.x_skeleton: get_batch(dataset_[2])}
 
         print 'compiling apply_updates'
         apply_updates = function([], 
@@ -185,7 +187,7 @@ class convnet3d_grbm_early_fusion():
             on_unused_input='ignore')
 
         print 'compiling test_model'
-        test_model = function([idx_mini, idx_micro], [cost, errors], 
+        test_model = function([self.idx_mini, self.idx_micro], [self.cost, self.errors], 
             givens=givens((x_, y_int32, x_skeleton_)),
             on_unused_input='ignore')
 

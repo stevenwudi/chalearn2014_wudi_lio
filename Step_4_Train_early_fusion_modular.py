@@ -13,7 +13,7 @@ from time import time, localtime
 from gzip import GzipFile
 import os
 # numpy imports
-from numpy import zeros, empty, inf, float32, random
+from numpy import zeros, empty, inf, float32, random, linspace
 
 # theano imports
 from theano import function, config, shared
@@ -29,8 +29,8 @@ from convnet3d import LogRegr, HiddenLayer, DropoutLayer
 from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop,\
                                      net,  DataLoader_with_skeleton_normalisation
 from functions.train_functions import _shared, _avg, write, ndtensor, print_params, lin,\
-                                      timing_report, training_report, epoch_report, _batch,\
-                                      test_lio, save_results, move_results, save_params, test_lio_skel
+                                      training_report, epoch_report, _batch,\
+                                      save_results, move_results, save_params, test_lio_skel
 
 from convnet3d_grbm_early_fusion import convnet3d_grbm_early_fusion
 # we need to parse an absolute path for HPC to load
@@ -62,11 +62,18 @@ os.makedirs(res_dir)
 ######################################################################
 net_convnet3d_grbm_early_fusion = convnet3d_grbm_early_fusion(src, res_dir, load_path)
 
+net_convnet3d_grbm_early_fusion.load_params(os.path.join(load_path,'paramsbest.zip'))
+
 x_ = _shared(empty(tr.in_shape))
 y_ = _shared(empty(tr.batch_size))
 y_int32 = T.cast(y_,'int32')
 x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
+#############################
+        # load normalisation constant given load_path
+Mean_skel, Std_skel, Mean_CNN, Std_CNN = net_convnet3d_grbm_early_fusion.load_normalisation_constant(load_path)
+loader = DataLoader_with_skeleton_normalisation(src, tr.batch_size, \
+                         Mean_CNN, Std_CNN, Mean_skel, Std_skel) # Lio changed it to read from HDF5 files
 ######################################################################
 print "\n%s\n\tcompiling\n%s"%(('-'*30,)*2)
 apply_updates, train_model, test_model = net_convnet3d_grbm_early_fusion.build_finetune_functions(x_, y_int32, x_skeleton_)
@@ -93,7 +100,7 @@ for epoch in xrange(tr.n_epochs):
     ce = []
     out_mean_train = []
     out_std_train = []
-    print_params(params) 
+    print_params(net_convnet3d_grbm_early_fusion.params) 
     ####################################################################
     print "\n%s\n\t epoch %d \n%s"%('-'*30, epoch, '-'*30)
     time_start = time()
@@ -120,12 +127,12 @@ for epoch in xrange(tr.n_epochs):
     valid_ce.append(test_lio_skel(use, test_model, batch, drop, tr.rng, epoch, tr.batch_size, x_, y_, loader, x_skeleton_))
 
     # save best params
-    res_dir = save_results(train_ce, valid_ce, res_dir, params=params, out_mean_train=out_mean_all,out_std_train=out_std_all)
+    res_dir = save_results(train_ce, valid_ce, res_dir, params=net_convnet3d_grbm_early_fusion.params, out_mean_train=out_mean_all,out_std_train=out_std_all)
     if not tr.moved: res_dir = move_results(res_dir)
 
     if valid_ce[-1][1] < best_valid:
-        save_params(params, res_dir, "best")
-    save_params(params, res_dir)
+        save_params(net_convnet3d_grbm_early_fusion.params, res_dir, "best")
+    save_params(net_convnet3d_grbm_early_fusion.params, res_dir)
 
     if valid_ce[-1][1] < best_valid:
         best_valid = valid_ce[-1][1]

@@ -55,7 +55,6 @@ class conv3d_chalearn(object):
 
         # number of inputs for MLP = (# maps last stage)*(# convnets)*(resulting video shape) + trajectory size
         n_in_MLP = net.maps[-1]*net.n_convnets*prod(tr.video_shapes[-1]) 
-        print 'MLP:', n_in_MLP, "->", net.hidden_vid, "->", net.n_class, ""
 
         if use.depth:
             if net.n_convnets==2: 
@@ -111,11 +110,11 @@ class conv3d_chalearn(object):
             out = self.layers[-1].output
 
 
-        if tr.inspect: 
-            self.insp_mean = T.stack(self.insp_mean)
-            self.insp_std = T.stack(self.insp_std)
+        #if tr.inspect: 
+            #self.insp_mean = T.stack(self.insp_mean)
+            #self.insp_std = T.stack(self.insp_std)
             #self.insp = T.stack(self.insp[0],self.insp[1],self.insp[2],self.insp[3],self.insp[4],self.insp[5], T.mean(out))
-        else: self.insp =  T.stack(0,0)
+        #else: self.insp =  T.stack(0,0)
         # out = normalize(out)
         if use.drop: out = DropoutLayer(out, rng=tr.rng, p=drop.p_hidden).output
         #maxout
