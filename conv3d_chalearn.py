@@ -17,7 +17,8 @@ class conv3d_chalearn(object):
 
         self.out = []
         self.layers = []
-        self.insp = []
+        self.insp_mean = []
+        self.insp_std = []
 
         for c in (use, lr, batch, net, reg, drop, mom, tr):
             write(c.__name__+":", res_dir)
@@ -79,7 +80,9 @@ class conv3d_chalearn(object):
                 self.layers.append(ConvLayer(out[i], **conv_args(stage, i, batch, net, use, tr.rng, tr.video_shapes, load_path)))
                 out[i] = self.layers[-1].output
                 out[i] = PoolLayer(out[i], net.pools[stage], method=net.pool_method).output
-                if tr.inspect: self.insp.append(T.mean(out[i]))
+                if tr.inspect: 
+                    self.insp_mean.append(T.mean(out[i]))
+                    self.insp_std.append(T.std(out[i]))
 
         # flatten all convnets outputs
         for i in xrange(len(out)): out[i] = std_norm(out[i],axis=[-3,-2,-1])
@@ -108,7 +111,10 @@ class conv3d_chalearn(object):
             out = self.layers[-1].output
 
 
-        if tr.inspect: self.insp = T.stack(self.insp[0],self.insp[1],self.insp[2],self.insp[3],self.insp[4],self.insp[5], T.mean(out))
+        if tr.inspect: 
+            self.insp_mean = T.stack(self.insp_mean)
+            self.insp_std = T.stack(self.insp_std)
+            #self.insp = T.stack(self.insp[0],self.insp[1],self.insp[2],self.insp[3],self.insp[4],self.insp[5], T.mean(out))
         else: self.insp =  T.stack(0,0)
         # out = normalize(out)
         if use.drop: out = DropoutLayer(out, rng=tr.rng, p=drop.p_hidden).output

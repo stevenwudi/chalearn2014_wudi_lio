@@ -227,7 +227,7 @@ for epoch in xrange(tr.n_epochs):
 	#print out_mean_train, out_std_train
         ce.append(ce_temp)
         out_mean_train.append(out_mean_temp)
-	out_std_train.append(out_std_temp)
+        out_std_train.append(out_std_temp)
 
         print "Training: No.%d iter of Total %d, %d s"% (i,loader.n_iter_train, time()-time_start_iter)  \
                 + "\t| negative_log_likelihood "+ training_report(ce[-1]) 
