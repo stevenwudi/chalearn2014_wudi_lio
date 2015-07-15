@@ -112,13 +112,13 @@ class convnet3d_grbm_early_fusion():
 
     def load_normalisation_constant(self, load_path):
         # load the normalisation for the skeleton       
-        f = open(os.path.join(load_path, 'SK_normalization.pkl'),'rb')
+        f = open(os.path.join(load_path, 'SK_normalization.pkl'),'r')
         SK_normalization = cPickle.load(f)
         Mean_skel = SK_normalization ['Mean1']
         Std_skel = SK_normalization['Std1']
 
         # load the normalisation for the 3dcnn
-        f = open(os.path.join(load_path, 'CNN_normalization.pkl'),'rb')
+        f = open(os.path.join(load_path, 'CNN_normalization.pkl'),'r')
         CNN_normalization = cPickle.load(f)
         Mean_CNN = CNN_normalization ['Mean_CNN']
         Std_CNN = CNN_normalization['Std_CNN']

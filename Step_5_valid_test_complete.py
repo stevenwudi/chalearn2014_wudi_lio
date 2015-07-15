@@ -21,7 +21,7 @@ from functions.train_functions import _shared, _avg, write, ndtensor, print_para
                                       training_report, epoch_report, _batch,\
                                       save_results, move_results, save_params, test_lio_skel
 from classes.hyperparameters import batch
-
+from dbn.utils import normalize
 
 from convnet3d_grbm_early_fusion import convnet3d_grbm_early_fusion
 
@@ -76,14 +76,19 @@ net_convnet3d_grbm_early_fusion = convnet3d_grbm_early_fusion(res_dir, load_path
 x_ = _shared(empty(tr.in_shape))
 x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
+#############################
+# load normalisation constant given load_path
+Mean_skel, Std_skel, Mean_CNN, Std_CNN = net_convnet3d_grbm_early_fusion.load_normalisation_constant(load_path)
+
 
 for file_count, file in enumerate(samples):
     condition = (file_count > -1)   
     if condition:   #wudi only used first 650 for validation !!! Lio be careful!
         print("\t Processing file " + file)
         # Create the object to access the sample
+        print os.path.join(data,file)
         sample = GestureSample(os.path.join(data,file))
-
+        print "finish loading samples"
         video, Feature_gesture = sample.get_test_data_wudi_lio(used_joints)
         print video.shape, Feature_gesture.shape
         save_path= os.path.join(save_dst, file)
@@ -97,8 +102,9 @@ for file_count, file in enumerate(samples):
 
             video_temp = video[batch.micro*batchnumber:batch.micro*(batchnumber+1),:]
             skel_temp =  Feature_gesture[batch.micro*batchnumber:batch.micro*(batchnumber+1),:]  
-            x_.set_value(video_temp.astype("float32"),borrow=True)
-            x_skeleton_ = _shared(skel_temp.astype("float32"), borrow=True)
+
+            x_.set_value(normalize(video_temp, Mean_CNN, Std_CNN).astype("float32"),borrow=True)
+            x_skeleton_.set_value(normalize(skel_temp,Mean_skel, Std_skel).astype("float32"), borrow=True)
             p_y_given_x = net_convnet3d_grbm_early_fusion.prediction_function(x_, x_skeleton_)
             observ_likelihood[batch.micro*batchnumber:batch.micro*(batchnumber+1),:] =  p_y_given_x()
 
