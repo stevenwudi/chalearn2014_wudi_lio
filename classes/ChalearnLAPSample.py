@@ -871,10 +871,10 @@ class GestureSample(object):
         return s,d,g,u, corrupt
 
 
-    def get_test_data_wudi_lio(self, vid_res = (480, 640), cuboid_length=4, step=1):
+    def get_test_data_wudi_lio(self, used_joints=used_joints,vid_res = (480, 640), cuboid_length=4, step=1):
         skelet_original = []
         n_f = self.getNumFrames()
-        #n_f = 20  # Need to change here!
+
         start,end = 1, n_f 
         depth,user,gray = [empty((n_f,)+vid_res, "uint8") for _ in range(3)]
 
@@ -897,14 +897,6 @@ class GestureSample(object):
         #label start from 0 REMEMBER!!!
         video = video.swapaxes(0,2)
         video = video.swapaxes(1,2)
-
-        #show_gray = True
-        #show_depth = True
-        #if True: 
-        #    Targets = zeros(shape=(depth.shape[1], 101))
-        #    Targets[0,:]=1
-        #if show_depth: play_vid_wudi(depth, Targets,  wait=1000/10, norm=False)
-        #if show_gray: play_vid_wudi(gray, Targets,  wait=1000/10, norm=False)
 
         cur_fr = 1
         pheight = []
@@ -947,16 +939,34 @@ class GestureSample(object):
                     img = img[sli,sli]
                     img = misc.imresize(img,(h,h))
                     v_new[i,1,j,k] = img
-        #if True: 
-        #    Targets = zeros(shape=(v_new.shape[0], 101))
-        #    Targets[0,:]=1
-        #    depth = v_new[:,0,:,:,:]
-        #    depth = depth.swapaxes(1,0)
-        #    gray = v_new[:,1,:,:,:]
-        #    gray = gray.swapaxes(1,0)
-        #    play_vid_wudi(depth, Targets,  wait=1000/10, norm=False)
-        #    play_vid_wudi(gray, Targets,  wait=1000/10, norm=False)
-        return v_new
+
+
+        #### extract the skeleton features here
+        frame_num = 0 
+        Skeleton_matrix  = numpy.zeros(shape=(len(skelet_original), len(used_joints)*3))
+        for numFrame in range(len(skelet_original)):                    
+            # Get the Skeleton object for this frame
+            for joints in range(len(used_joints)):
+                Skeleton_matrix[frame_num, joints*3: (joints+1)*3] = skelet_original.joins[used_joints[joints]][0]
+            frame_num += 1
+
+        #####################################################################
+        # Articulated poses extraction
+        #####################################################################
+        """
+        Feature design: (1) relational pairwise (2) velocity (3) acceleration
+        Reference:
+        The Moving Pose: An Efficient 3D Kinematics Descriptor for Low-Latency Action Recognition and Detection
+        ICCV 2013
+        """
+        njoints = len(used_joints)
+        Feature_gesture = Extract_feature_Accelerate(Pose, njoints)   
+
+
+        return v_new, Feature_gesture
+
+
+
 
 
 class ActionSample(object):
