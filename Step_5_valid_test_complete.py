@@ -37,7 +37,7 @@ STATE_NO = 5
 #data path and store path definition
 pc = "wudi"
 if pc=="wudi":
-    data = r"/idiap/user/dwu/chalearn/Test" # dir of original data -- note that wudi has decompressed it!!!
+    data = r"E:\CHALEARN2014\Train" # dir of original data -- note that wudi has decompressed it!!!
     save_dst = r"/idiap/user/dwu/chalearn/Test_CNN_precompute"
     res_dir_ = r"/idiap/user/dwu/chalearn/result/"
 elif pc=="lio":
@@ -100,7 +100,7 @@ for file_count, file in enumerate(samples):
             x_.set_value(video_temp.astype("float32"),borrow=True)
             x_skeleton_ = _shared(skel_temp.astype("float32"), borrow=True)
             p_y_given_x = net_convnet3d_grbm_early_fusion.prediction_function(x_, x_skeleton_)
-            observ_likelihood[batch.micro*batchnumber:batch.micro*(batchnumber+1),:] =  p_y_given_x
+            observ_likelihood[batch.micro*batchnumber:batch.micro*(batchnumber+1),:] =  p_y_given_x()
 
         # because input batch number should be 64, so here it is a bit of hack:
         video_temp = video[batch.micro* (batchnumber+1):,:]   
