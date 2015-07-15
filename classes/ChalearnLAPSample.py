@@ -947,7 +947,7 @@ class GestureSample(object):
         for numFrame in range(len(skelet_original)):                    
             # Get the Skeleton object for this frame
             for joints in range(len(used_joints)):
-                Skeleton_matrix[frame_num, joints*3: (joints+1)*3] = skelet_original.joins[used_joints[joints]][0]
+                Skeleton_matrix[frame_num, joints*3: (joints+1)*3] = skelet_original[numFrame].joins[used_joints[joints]][0]
             frame_num += 1
 
         #####################################################################
@@ -960,10 +960,10 @@ class GestureSample(object):
         ICCV 2013
         """
         njoints = len(used_joints)
-        Feature_gesture = Extract_feature_Accelerate(Pose, njoints)   
+        Feature_gesture = Extract_feature_Accelerate(Skeleton_matrix, njoints)   
 
 
-        return v_new, Feature_gesture
+        return v_new[:-1,:], Feature_gesture
 
 
 
