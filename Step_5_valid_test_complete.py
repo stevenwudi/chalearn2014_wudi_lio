@@ -10,9 +10,16 @@ import sys
 import cPickle
 
 from classes import GestureSample
-from functions.preproc_functions import *
+# customized imports
+
+#  modular imports
+# the hyperparameter set the data dir, use etc classes, it's important to modify it according to your need
+from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop,\
+                                     net,  DataLoader_with_skeleton_normalisation
 from functions.test_functions import *
-from functions.train_functions import *
+from functions.train_functions import _shared, _avg, write, ndtensor, print_params, lin,\
+                                      training_report, epoch_report, _batch,\
+                                      save_results, move_results, save_params, test_lio_skel
 from classes.hyperparameters import batch
 
 
@@ -20,6 +27,7 @@ from convnet3d_grbm_early_fusion import convnet3d_grbm_early_fusion
 
 
 import scipy.io as sio  
+from time import localtime
 ## Load Prior and transitional Matrix
 dic=sio.loadmat('Prior_Transition_matrix_5states.mat')
 Transition_matrix = dic['Transition_matrix']
@@ -31,6 +39,7 @@ pc = "wudi"
 if pc=="wudi":
     data = r"/idiap/user/dwu/chalearn/Test" # dir of original data -- note that wudi has decompressed it!!!
     save_dst = r"/idiap/user/dwu/chalearn/Test_CNN_precompute"
+    res_dir_ = r"/idiap/user/dwu/chalearn/result/"
 elif pc=="lio":
     data = r"/media/lio/Elements/chalearn/trainingset"
     save_dst = " "
@@ -69,13 +78,14 @@ x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
 
 for file_count, file in enumerate(samples):
-    condition = (file_count > 650)   
+    condition = (file_count > -1)   
     if condition:   #wudi only used first 650 for validation !!! Lio be careful!
         print("\t Processing file " + file)
         # Create the object to access the sample
         sample = GestureSample(os.path.join(data,file))
 
         video, Feature_gesture = sample.get_test_data_wudi_lio(used_joints)
+        print video.shape, Feature_gesture.shape
         save_path= os.path.join(save_dst, file)
         #out_file = open(save_path, 'wb')
         #cPickle.dump(video, out_file, protocol=cPickle.HIGHEST_PROTOCOL)

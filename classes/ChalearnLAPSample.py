@@ -871,7 +871,7 @@ class GestureSample(object):
         return s,d,g,u, corrupt
 
 
-    def get_test_data_wudi_lio(self, used_joints=used_joints,vid_res = (480, 640), cuboid_length=4, step=1):
+    def get_test_data_wudi_lio(self, used_joints,vid_res = (480, 640), cuboid_length=4, step=1):
         skelet_original = []
         n_f = self.getNumFrames()
 
