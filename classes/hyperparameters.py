@@ -28,8 +28,8 @@ class lr:
     decay_big = .1
     decay_each_epoch = True
     decay_if_plateau = True
-    start = 0.001
-    stop = 0.0001    
+    start = 0.0001
+    stop = 0.00001    
     
 
 class batch:

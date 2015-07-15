@@ -216,7 +216,7 @@ class convnet3d_grbm_early_fusion():
 
         print 'compiling test_model'
 
-        test_model = function([], [self.p_y_given_x], 
+        test_model = function([], self.p_y_given_x, 
             givens={self.x: x_,
                     self.x_skeleton: x_skeleton_}, 
             on_unused_input='ignore')
