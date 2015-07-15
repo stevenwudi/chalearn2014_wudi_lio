@@ -21,7 +21,7 @@ from convnet3d import LogRegr, HiddenLayer, DropoutLayer
 
 class convnet3d_grbm_early_fusion():
 
-    def __init__(self, src, res_dir, load_path):
+    def __init__(self, res_dir, load_path):
         
         self.layers = [] # only contain the layers from fusion
         self.insp_mean = [] # inspection for each layer mean activation
@@ -84,7 +84,7 @@ class convnet3d_grbm_early_fusion():
         self.layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden, 
             W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
 
-
+        self.p_y_given_x = self.layers[-1].p_y_given_x
         ######################################################################
         # cost function
         self.cost = self.layers[-1].negative_log_likelihood(self.y)
@@ -208,3 +208,17 @@ class convnet3d_grbm_early_fusion():
             p.set_value(param_load[load_params_pos], borrow=True)
             load_params_pos += 1 
         print "finish loading parameters"
+
+    def prediction_function(self, x_, x_skeleton_):
+        '''
+        This is used to have the output function using video and skeleton
+        '''
+
+        print 'compiling test_model'
+
+        test_model = function([], [self.p_y_given_x], 
+            givens={self.x: x_,
+                    self.x_skeleton: x_skeleton_}, 
+            on_unused_input='ignore')
+
+        return test_model

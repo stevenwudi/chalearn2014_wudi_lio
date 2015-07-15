@@ -12,14 +12,20 @@ import cPickle
 from classes import GestureSample
 from functions.preproc_functions import *
 from functions.test_functions import *
-from functions.test_cnn_build import build
+from functions.train_functions import *
 from classes.hyperparameters import batch
+
+
+from convnet3d_grbm_early_fusion import convnet3d_grbm_early_fusion
+
 
 import scipy.io as sio  
 ## Load Prior and transitional Matrix
 dic=sio.loadmat('Prior_Transition_matrix_5states.mat')
 Transition_matrix = dic['Transition_matrix']
 Prior = dic['Prior']
+# number of hidden states for each gesture class
+STATE_NO = 5
 #data path and store path definition
 pc = "wudi"
 if pc=="wudi":
@@ -39,6 +45,27 @@ elif pc=="lio":
 
 print len(samples), "samples found"
 
+used_joints = ['ElbowLeft', 'WristLeft', 'ShoulderLeft', 'HandLeft',
+               'ElbowRight', 'WristRight', 'ShoulderRight', 'HandRight',
+               'Head', 'Spine', 'HipCenter']
+
+lt = localtime()
+res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
+            +str(lt.tm_mday).zfill(2)+"."+str(lt.tm_hour).zfill(2)+"."\
+            +str(lt.tm_min).zfill(2)+"."+str(lt.tm_sec).zfill(2)
+os.makedirs(res_dir)
+
+# we need to parse an absolute path for HPC to load
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('path')
+args = parser.parse_args()
+load_path = args.path
+######################################################################
+net_convnet3d_grbm_early_fusion = convnet3d_grbm_early_fusion(res_dir, load_path)
+
+x_ = _shared(empty(tr.in_shape))
+x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
 
 for file_count, file in enumerate(samples):
@@ -47,35 +74,31 @@ for file_count, file in enumerate(samples):
         print("\t Processing file " + file)
         # Create the object to access the sample
         sample = GestureSample(os.path.join(data,file))
-        if not load_flag:
-            video = sample.get_test_data_wudi_lio()
-            save_path= os.path.join(save_dst, file)
-            out_file = open(save_path, 'wb')
-            cPickle.dump(video, out_file, protocol=cPickle.HIGHEST_PROTOCOL)
-            out_file.close()
-        else:
-            save_path= os.path.join(data,file,'test')
-            video = cPickle.load(open(save_path,"rb"))
-            print video.shape
+
+        video, Feature_gesture = sample.get_test_data_wudi_lio(used_joints)
+        save_path= os.path.join(save_dst, file)
+        #out_file = open(save_path, 'wb')
+        #cPickle.dump(video, out_file, protocol=cPickle.HIGHEST_PROTOCOL)
+        #out_file.close()
 
         print "start computing likelihood"
-        observ_likelihood = numpy.empty(shape=(video.shape[0],20*5+1)) # 20 classed * 5 states + 1 ergodic state
+        observ_likelihood = numpy.empty(shape=(video.shape[0],20*STATE_NO+1)) # 20 classed * 5 states + 1 ergodic state
         for batchnumber in xrange(video.shape[0]/batch.micro):
-            video_temp = video[batch.micro*batchnumber:batch.micro*(batchnumber+1),:]   
+
+            video_temp = video[batch.micro*batchnumber:batch.micro*(batchnumber+1),:]
+            skel_temp =  Feature_gesture[batch.micro*batchnumber:batch.micro*(batchnumber+1),:]  
             x_.set_value(video_temp.astype("float32"),borrow=True)
-            y_pred, p_y_given_x = evalu_model()
-            observ_likelihood[batch.micro*batchnumber:batch.micro*(batchnumber+1),:] =  \
-                p_y_given_x
+            x_skeleton_ = _shared(skel_temp.astype("float32"), borrow=True)
+            p_y_given_x = net_convnet3d_grbm_early_fusion.prediction_function(x_, x_skeleton_)
+            observ_likelihood[batch.micro*batchnumber:batch.micro*(batchnumber+1),:] =  p_y_given_x
 
         # because input batch number should be 64, so here it is a bit of hack:
-        video_temp_1 = video[batch.micro* (batchnumber+1):,:]   
-        video_temp_2 = numpy.zeros(shape=(64-video_temp_1.shape[0], 2, 2, 4, 64, 64))
-        video_temp = numpy.concatenate((video_temp_1, video_temp_2), axis=0)
+        video_temp = video[batch.micro* (batchnumber+1):,:]   
+        skel_temp = Feature_gesture[batch.micro* (batchnumber+1):,:]  
         x_.set_value(video_temp.astype("float32"),borrow=True)
-        y_pred, p_y_given_x = evalu_model()
-        observ_likelihood[batch.micro* (batchnumber+1):,:] =  \
-            p_y_given_x[:video_temp_1.shape[0], :]
-
+        x_skeleton_ = _shared(skel_temp.astype("float32"), borrow=True)
+        p_y_given_x = net_convnet3d_grbm_early_fusion.prediction_function(x_, x_skeleton_)
+        observ_likelihood[batch.micro* (batchnumber+1):,:] =  p_y_given_x
 
         ##########################
         # viterbi path decoding

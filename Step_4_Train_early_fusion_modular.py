@@ -60,7 +60,7 @@ res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
 os.makedirs(res_dir)
 
 ######################################################################
-net_convnet3d_grbm_early_fusion = convnet3d_grbm_early_fusion(src, res_dir, load_path)
+net_convnet3d_grbm_early_fusion = convnet3d_grbm_early_fusion(res_dir, load_path)
 
 net_convnet3d_grbm_early_fusion.load_params(os.path.join(load_path,'paramsbest.zip'))
 
@@ -70,7 +70,7 @@ y_int32 = T.cast(y_,'int32')
 x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
 #############################
-        # load normalisation constant given load_path
+# load normalisation constant given load_path
 Mean_skel, Std_skel, Mean_CNN, Std_CNN = net_convnet3d_grbm_early_fusion.load_normalisation_constant(load_path)
 loader = DataLoader_with_skeleton_normalisation(src, tr.batch_size, \
                          Mean_CNN, Std_CNN, Mean_skel, Std_skel) # Lio changed it to read from HDF5 files
