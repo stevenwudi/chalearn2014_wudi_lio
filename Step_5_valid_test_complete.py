@@ -3,7 +3,7 @@
 Di Wu   stevenwudi@gmail.com
 2015-06-12
 """
-
+from numpy import log
 from glob import glob
 import os
 import sys
@@ -72,10 +72,10 @@ args = parser.parse_args()
 load_path = args.path
 ######################################################################
 net_convnet3d_grbm_early_fusion = convnet3d_grbm_early_fusion(res_dir, load_path)
-
+net_convnet3d_grbm_early_fusion.load_params(os.path.join(load_path,'paramsbest.zip'))
 x_ = _shared(empty(tr.in_shape))
 x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
-
+p_y_given_x = net_convnet3d_grbm_early_fusion.prediction_function(x_, x_skeleton_)
 #############################
 # load normalisation constant given load_path
 Mean_skel, Std_skel, Mean_CNN, Std_CNN = net_convnet3d_grbm_early_fusion.load_normalisation_constant(load_path)
@@ -105,22 +105,27 @@ for file_count, file in enumerate(samples):
 
             x_.set_value(normalize(video_temp, Mean_CNN, Std_CNN).astype("float32"),borrow=True)
             x_skeleton_.set_value(normalize(skel_temp,Mean_skel, Std_skel).astype("float32"), borrow=True)
-            p_y_given_x = net_convnet3d_grbm_early_fusion.prediction_function(x_, x_skeleton_)
+            
             observ_likelihood[batch.micro*batchnumber:batch.micro*(batchnumber+1),:] =  p_y_given_x()
 
         # because input batch number should be 64, so here it is a bit of hack:
-        video_temp = video[batch.micro* (batchnumber+1):,:]   
-        skel_temp = Feature_gesture[batch.micro* (batchnumber+1):,:]  
-        x_.set_value(video_temp.astype("float32"),borrow=True)
-        x_skeleton_ = _shared(skel_temp.astype("float32"), borrow=True)
-        p_y_given_x = net_convnet3d_grbm_early_fusion.prediction_function(x_, x_skeleton_)
-        observ_likelihood[batch.micro* (batchnumber+1):,:] =  p_y_given_x
+        video_temp_1 = video[batch.micro* (batchnumber+1):,:]   
+        video_temp_2 = numpy.zeros(shape=(64-video_temp_1.shape[0], 2, 2, 4, 64, 64))
+        video_temp = numpy.concatenate((video_temp_1, video_temp_2), axis=0)
+        skel_temp_1 = Feature_gesture[batch.micro* (batchnumber+1):,:]  
+        skel_temp_2 = numpy.zeros(shape=(64-skel_temp_1.shape[0],891))
+        skel_temp = numpy.concatenate((skel_temp_1, skel_temp_2), axis=0)
+        x_.set_value(normalize(video_temp, Mean_CNN, Std_CNN).astype("float32"),borrow=True)
+        x_skeleton_.set_value(normalize(skel_temp,Mean_skel, Std_skel).astype("float32"), borrow=True)
+
+        ob_temp = p_y_given_x()
+        observ_likelihood[batch.micro* (batchnumber+1):,:] =  ob_temp[:video_temp_1.shape[0], :]
 
         ##########################
         # viterbi path decoding
         #####################
 
-        log_observ_likelihood = log(observ_likelihood.T + numpy.finfo(numpy.float32).eps)
+        log_observ_likelihood = numpy.log(observ_likelihood.T + numpy.finfo(numpy.float32).eps)
         log_observ_likelihood[-1, 0:5] = 0
         log_observ_likelihood[-1, -5:] = 0
 
@@ -163,7 +168,7 @@ for file_count, file in enumerate(samples):
             plt.show()
         else:     
             from pylab import savefig
-            save_dir=r'C:\Users\PC-User\Documents\GitHub\chalearn2014_wudi_lio\SK_path'
+            save_dir=r'D:\Chalearn2014'
             save_path= os.path.join(save_dir,file)
             savefig(save_path, bbox_inches='tight')
                 #plt.show()

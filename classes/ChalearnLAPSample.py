@@ -882,7 +882,11 @@ class GestureSample(object):
         skelet_original = []
         n_f = self.getNumFrames()
 
+        ########################################################################
+        #n_f = 500############ Change here!!!! Delete this line
+        ########################################################################
         start,end = 1, n_f 
+        
         depth,user,gray = [empty((n_f,)+vid_res, "uint8") for _ in range(3)]
 
         for i,framenum in enumerate(range(start,end+1)): # Lio forgot the last frame!
