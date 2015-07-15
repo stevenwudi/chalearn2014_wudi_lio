@@ -125,7 +125,7 @@ class convnet3d_grbm_early_fusion():
 
         return  Mean_skel, Std_skel, Mean_CNN, Std_CNN
 
-    def build_finetune_functions(self, x_, y_int32, x_skeleton_):
+    def build_finetune_functions(self, x_, y_int32, x_skeleton_, learning_rate):
         '''
         This is used to fine tune the network
         '''
@@ -138,7 +138,7 @@ class convnet3d_grbm_early_fusion():
         last_upd = []
 
         # shared variables
-        learning_rate = shared(float32(lr.init))
+        
         if use.mom: momentum = shared(float32(mom.momentum))
         def get_update(i): return update[i]/(batch.mini/batch.micro)
 
@@ -187,7 +187,7 @@ class convnet3d_grbm_early_fusion():
             on_unused_input='ignore')
 
         print 'compiling test_model'
-        test_model = function([self.idx_mini, self.idx_micro], [self.cost, self.errors], 
+        test_model = function([self.idx_mini, self.idx_micro], [self.cost, self.errors, self.insp_mean, self.insp_std], 
             givens=givens((x_, y_int32, x_skeleton_)),
             on_unused_input='ignore')
 

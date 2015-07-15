@@ -76,7 +76,8 @@ loader = DataLoader_with_skeleton_normalisation(src, tr.batch_size, \
                          Mean_CNN, Std_CNN, Mean_skel, Std_skel) # Lio changed it to read from HDF5 files
 ######################################################################
 print "\n%s\n\tcompiling\n%s"%(('-'*30,)*2)
-apply_updates, train_model, test_model = net_convnet3d_grbm_early_fusion.build_finetune_functions(x_, y_int32, x_skeleton_)
+learning_rate = shared(float32(lr.init))
+apply_updates, train_model, test_model = net_convnet3d_grbm_early_fusion.build_finetune_functions(x_, y_int32, x_skeleton_,learning_rate)
 
 
 ######################################################################
@@ -87,6 +88,7 @@ best_valid = inf
 lr_decay_epoch = 0
 n_lr_decays = 0
 train_ce, valid_ce = [], []
+out_mean_all, out_std_all = [], []
 
 res_dir = save_results(train_ce, valid_ce, res_dir, params=net_convnet3d_grbm_early_fusion.params)
 
@@ -97,6 +99,7 @@ save_params(net_convnet3d_grbm_early_fusion.params, res_dir)
 learning_rate_map = linspace(lr.start, lr.stop, tr.n_epochs)
 
 for epoch in xrange(tr.n_epochs):
+    learning_rate.set_value(float32(learning_rate_map[epoch]))
     ce = []
     out_mean_train = []
     out_std_train = []
@@ -138,11 +141,12 @@ for epoch in xrange(tr.n_epochs):
         best_valid = valid_ce[-1][1]
 
     # epoch report
+    
     epoch_report(epoch, best_valid, time()-time_start, learning_rate.get_value(borrow=True),\
         train_ce[-1], valid_ce[-1], res_dir)
 
     # decay the learning rate
-    learning_rate.set_value(float32(learning_rate_map[epoch]))
+    
     loader.shuffle_train()
 
 
