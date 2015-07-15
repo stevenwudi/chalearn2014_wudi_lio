@@ -142,15 +142,21 @@ class GestureSample(object):
         rgbVideoPath=self.samplePath + os.path.sep + self.seqID + '_color.mp4'
         if not os.path.exists(rgbVideoPath):
             raise Exception("Invalid sample file. RGB data is not available")
+
         self.rgb = cv2.VideoCapture(rgbVideoPath)
+
         while not self.rgb.isOpened():
             self.rgb = cv2.VideoCapture(rgbVideoPath)
             cv2.waitKey(500)
             # Open video access for Depth information
         depthVideoPath=self.samplePath + os.path.sep + self.seqID + '_depth.mp4'
+        
+        print "finish here", depthVideoPath
         if not os.path.exists(depthVideoPath):
             raise Exception("Invalid sample file. Depth data is not available")
         self.depth = cv2.VideoCapture(depthVideoPath)
+        
+        print "finish depth here"
         while not self.depth.isOpened():
             self.depth = cv2.VideoCapture(depthVideoPath)
             cv2.waitKey(500)
@@ -196,6 +202,7 @@ class GestureSample(object):
                 for row in filereader:
                     self.labels.append(map(int,row))
                 del filereader
+
     def __del__(self):
         """ Destructor. If the object unziped the sample, it remove the temporal data """
         if self.unzip:
