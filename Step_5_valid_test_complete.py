@@ -27,31 +27,17 @@ from convnet3d_grbm_early_fusion import convnet3d_grbm_early_fusion
 
 
 import scipy.io as sio  
-from time import localtime
-## Load Prior and transitional Matrix
-dic=sio.loadmat('Prior_Transition_matrix_5states.mat')
-Transition_matrix = dic['Transition_matrix']
-Prior = dic['Prior']
+from time import localtime, time
+
 # number of hidden states for each gesture class
 STATE_NO = 5
 #data path and store path definition
-pc = "wudi"
-if pc=="wudi":
-    data = r"E:\CHALEARN2014\Train" # dir of original data -- note that wudi has decompressed it!!!
-    save_dst = r"/idiap/user/dwu/chalearn/Test_CNN_precompute"
-    res_dir_ = r"/idiap/user/dwu/chalearn/result/"
-elif pc=="lio":
-    data = r"/media/lio/Elements/chalearn/trainingset"
-    save_dst = " "
-
-load_flag = False
+data = "/idiap/user/dwu/chalearn/Test_CNN_precompute"
+save_dst = "/idiap/user/dwu/chalearn/Test_fusion_precompute"
+res_dir_ = "/idiap/user/dwu/chalearn/result/"
 
 os.chdir(data)
-if pc=="wudi":
-        samples=glob("*")  # because wudi unzipped all the files already!
-elif pc=="lio":
-        samples=glob("*.zip")
-
+samples=glob("*.zip") 
 print len(samples), "samples found"
 
 used_joints = ['ElbowLeft', 'WristLeft', 'ShoulderLeft', 'HandLeft',
@@ -84,17 +70,28 @@ Mean_skel, Std_skel, Mean_CNN, Std_CNN = net_convnet3d_grbm_early_fusion.load_no
 for file_count, file in enumerate(samples):
     condition = (file_count > -1)   
     if condition:   #wudi only used first 650 for validation !!! Lio be careful!
-        print("\t Processing file " + file)
-        # Create the object to access the sample
-        print os.path.join(data,file)
-        sample = GestureSample(os.path.join(data,file))
-        print "finish loading samples"
-        video, Feature_gesture = sample.get_test_data_wudi_lio(used_joints)
-        print video.shape, Feature_gesture.shape
-        save_path= os.path.join(save_dst, file)
-        #out_file = open(save_path, 'wb')
-        #cPickle.dump(video, out_file, protocol=cPickle.HIGHEST_PROTOCOL)
-        #out_file.close()
+        save_path= os.path.join(data, file)
+        print file
+        time_start = time()
+        # we load precomputed feature set or recompute the whole feature set
+        if os.path.isfile(save_path):
+            print "loading exiting file"
+            data_dic = cPickle.load(open(save_path,'rb'))
+            video = data_dic["video"]
+            Feature_gesture = data_dic["Feature_gesture"]
+            assert video.shape[0] == Feature_gesture.shape[0]            
+        else:
+            print("\t Processing file " + file)
+            # Create the object to access the sample
+            sample = GestureSample(os.path.join(data,file))
+            print "finish loading samples"
+            video, Feature_gesture = sample.get_test_data_wudi_lio(used_joints)
+            assert video.shape[0] == Feature_gesture.shape[0]# -*- coding: utf-8 -*-
+            
+            print "finish preprocessing"
+            out_file = open(save_path, 'wb')
+            cPickle.dump({"video":video, "Feature_gesture":Feature_gesture}, out_file, protocol=cPickle.HIGHEST_PROTOCOL)
+            out_file.close()
 
         print "start computing likelihood"
         observ_likelihood = numpy.empty(shape=(video.shape[0],20*STATE_NO+1)) # 20 classed * 5 states + 1 ergodic state
@@ -122,53 +119,13 @@ for file_count, file in enumerate(samples):
         observ_likelihood[batch.micro* (batchnumber+1):,:] =  ob_temp[:video_temp_1.shape[0], :]
 
         ##########################
-        # viterbi path decoding
+        # save state matrix
         #####################
-
-        log_observ_likelihood = numpy.log(observ_likelihood.T + numpy.finfo(numpy.float32).eps)
-        log_observ_likelihood[-1, 0:5] = 0
-        log_observ_likelihood[-1, -5:] = 0
-
-        print("\t Viterbi path decoding " )
-        # do it in log space avoid numeric underflow
-        [path, predecessor_state_index, global_score] = viterbi_path_log(log(Prior), log(Transition_matrix), log_observ_likelihood)
-        #[path, predecessor_state_index, global_score] =  viterbi_path(Prior, Transition_matrix, observ_likelihood)
+        save_path= os.path.join(save_dst, file)
+        out_file = open(save_path, 'wb')
+        cPickle.dump(observ_likelihood, out_file, protocol=cPickle.HIGHEST_PROTOCOL)
+        out_file.close()
         
-        # Some gestures are not within the vocabulary
-        [pred_label, begin_frame, end_frame, Individual_score, frame_length] = viterbi_colab_states(path, global_score, state_no = 5, threshold=-2, mini_frame=19)
-
-        #heuristically we need to add 1 more frame here
-        begin_frame += 1 
-        end_frame +=5 # because we cut 4 frames as a cuboid so we need add extra 4 frames 
-
-        gesturesList=sample.getGestures()
-
-        import matplotlib.pyplot as plt
-        STATE_NO = 5
-        im  = imdisplay(global_score)
-        plt.clf()
-        plt.imshow(im, cmap='gray')
-        plt.plot(range(global_score.shape[-1]), path, color='c',linewidth=2.0)
-        plt.xlim((0, global_score.shape[-1]))
-        # plot ground truth
-        for gesture in gesturesList:
-        # Get the gesture ID, and start and end frames for the gesture
-            gestureID,startFrame,endFrame=gesture
-            frames_count = numpy.array(range(startFrame, endFrame+1))
-            pred_label_temp = ((gestureID-1) *STATE_NO +2) * numpy.ones(len(frames_count))
-            plt.plot(frames_count, pred_label_temp, color='r', linewidth=5.0)
-            
-        # plot clean path
-        for i in range(len(begin_frame)):
-            frames_count = numpy.array(range(begin_frame[i], end_frame[i]+1))
-            pred_label_temp = ((pred_label[i]-1) *STATE_NO +2) * numpy.ones(len(frames_count))
-            plt.plot(frames_count, pred_label_temp, color='#ffff00', linewidth=2.0)
-
-        if False:
-            plt.show()
-        else:     
-            from pylab import savefig
-            save_dir=r'D:\Chalearn2014'
-            save_path= os.path.join(save_dir,file)
-            savefig(save_path, bbox_inches='tight')
-                #plt.show()
+        print "use %f second"% (time()-time_start)
+        
+      

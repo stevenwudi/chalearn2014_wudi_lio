@@ -151,12 +151,10 @@ class GestureSample(object):
             # Open video access for Depth information
         depthVideoPath=self.samplePath + os.path.sep + self.seqID + '_depth.mp4'
         
-        print "finish here", depthVideoPath
         if not os.path.exists(depthVideoPath):
             raise Exception("Invalid sample file. Depth data is not available")
         self.depth = cv2.VideoCapture(depthVideoPath)
         
-        print "finish depth here"
         while not self.depth.isOpened():
             self.depth = cv2.VideoCapture(depthVideoPath)
             cv2.waitKey(500)
