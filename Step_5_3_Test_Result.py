@@ -92,7 +92,7 @@ for file_count, file in enumerate(samples):
         for i in range(len(begin_frame)):
             pred.append([ pred_label[i], begin_frame[i], end_frame[i]] )
 
-       
+        print pred
         sample.exportPredictions(pred,outPred)
      # ###############################################
         ## delete the sample
