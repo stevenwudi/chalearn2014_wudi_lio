@@ -40,9 +40,7 @@ save_dst = "/idiap/user/dwu/chalearn/Test_CNN_stata_matrix"
 res_dir_ = "/idiap/user/dwu/chalearn/result/"
 
 
-os.chdir(data)
-samples=glob(data+"*.zip") 
-print len(samples), "samples found"
+
 
 lt = localtime()
 res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
@@ -94,6 +92,9 @@ givens={x: x_},
 on_unused_input='ignore')
 
 
+os.chdir(data)
+samples=glob(data+"*.zip") 
+print len(samples), "samples found"
 
 for file_count, file in enumerate(samples):
     condition = (file_count > -1)   
