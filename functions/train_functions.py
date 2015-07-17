@@ -309,9 +309,8 @@ def load_params(use, load_path=""):
         path = load_path
     else:
         path = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
-    if os.path.isfile('paramsbest.zip'): 
-        file = GzipFile("paramsbest.zip", "rb")
-    elif os.path.isfile(path+'paramsbest.zip'):
+
+    if os.path.isfile(path+'paramsbest.zip'):
         file = GzipFile(path+"paramsbest.zip", "rb")
     else:
         file = GzipFile("params.zip", "rb")

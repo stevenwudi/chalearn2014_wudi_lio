@@ -108,8 +108,7 @@ class conv3d_chalearn(object):
             out = vid_
             # hidden layer
             if use.load:
-                W = load_params(use, load_path)
-                b = load_params(use, load_path)
+                W,b = load_params(use, load_path)
                 self.layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden_vid, rng=tr.rng, W=W, b=b,
                     W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=net.activation))
             else:

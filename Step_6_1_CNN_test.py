@@ -1,5 +1,4 @@
 """
-
 Di Wu   stevenwudi@gmail.com
 2015-06-12
 """
@@ -19,13 +18,14 @@ from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop,\
 from functions.test_functions import *
 from functions.train_functions import _shared, _avg, write, ndtensor, print_params, lin,\
                                       training_report, epoch_report, _batch,\
-                                      save_results, move_results, save_params, test_lio_skel
+                                      save_results, move_results, save_params, test_lio_skel, load_params
 from classes.hyperparameters import batch
 from dbn.utils import normalize
 
 from conv3d_chalearn import conv3d_chalearn
 from convnet3d import LogRegr
 import theano.tensor as T
+from theano import function
 
 import scipy.io as sio  
 from time import localtime, time
@@ -38,9 +38,6 @@ STATE_NO = 5
 data = "/idiap/user/dwu/chalearn/Test_video_skel"
 save_dst = "/idiap/user/dwu/chalearn/Test_CNN_stata_matrix"
 res_dir_ = "/idiap/user/dwu/chalearn/result/"
-
-
-
 
 lt = localtime()
 res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
@@ -55,7 +52,7 @@ os.makedirs(res_dir)
 #args = parser.parse_args()
 #load_path = args.path
 
-load_path='/remote/idiap.svm/user.active/dwu/chalearn/result/try/CNN_normalisation_53.0% 2015.06.23.12.17.31'
+load_path='/remote/idiap.svm/user.active/dwu/chalearn/result/try/CNN_normalisation_53.0% 2015.06.23.12.17.31/'
 ######################################################################
 import cPickle
 f = open('CNN_normalization.pkl','rb')
@@ -78,22 +75,21 @@ out = video_cnn.out
 layers = [] # all architecture layers
 # softmax layer
 if use.load:
-    W = load_params(use, load_path)
-    b = load_params(use, load_path)
+    W, b = load_params(use, load_path)
+    print W.shape, b.shape
     layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden_vid, W=W, b=b,
         W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
 else:
     layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden_vid, 
         W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
 
-
+print "compiling output"
 test_model = function([], layers[-1].p_y_given_x, 
-givens={x: x_}, 
-on_unused_input='ignore')
-
+                      givens={x: x_}, 
+                    on_unused_input='ignore')
 
 os.chdir(data)
-samples=glob(data+"*.zip") 
+samples=glob("*.zip") 
 print len(samples), "samples found"
 
 for file_count, file in enumerate(samples):

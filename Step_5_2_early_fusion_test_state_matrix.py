@@ -1,5 +1,4 @@
 """
-
 Di Wu   stevenwudi@gmail.com
 2015-06-12
 """
@@ -11,7 +10,6 @@ import cPickle
 
 from classes import GestureSample
 # customized imports
-
 #  modular imports
 # the hyperparameter set the data dir, use etc classes, it's important to modify it according to your need
 from classes.hyperparameters import use, lr, batch, reg, mom, tr, drop,\

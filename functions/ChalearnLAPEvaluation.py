@@ -137,23 +137,25 @@ def exportGT_Gesture(dataPath, outputPath):
     # For each sample on the GT, search the given prediction
     for sample in samplesList:
         # Build paths for sample
-        sampleFile = os.path.join(dataPath, sample)
-
-        # Prepare sample information
-        file = os.path.split(sampleFile)[1]
-        #sampleID = os.path.splitext(file)[0]
-        sampleID = file[:10]
-        samplePath = dataPath + os.path.sep + sampleID
-
-        # Copy labels file
-        sampleDataPath = samplePath  + '_data.csv'
-        #if not os.path.exists(sampleDataPath):
-        #    raise Exception("Invalid sample file. Sample data is not available")
-        shutil.copyfile(sampleDataPath, outputPath + os.path.sep + sampleID  + os.path.sep + sampleID +'_data.csv')
-
-        srcSampleLabelsPath = samplePath +  '_labels.csv'
-        shutil.copyfile(srcSampleLabelsPath, outputPath + os.path.sep + sampleID + os.path.sep + sampleID + '_labels.csv')
-       
+        if sample[-4:]==".csv":
+            print sample
+            sampleFile = os.path.join(dataPath, sample)
+    
+            # Prepare sample information
+            file = os.path.split(sampleFile)[1]
+            #sampleID = os.path.splitext(file)[0]
+            sampleID = file[:10]
+            samplePath = dataPath + os.path.sep + sampleID
+    
+            # Copy labels file
+            sampleDataPath = samplePath  + '_data.csv'
+            #if not os.path.exists(sampleDataPath):
+            #    raise Exception("Invalid sample file. Sample data is not available")
+            shutil.copyfile(sampleDataPath, outputPath + os.path.sep + sampleID  + os.path.sep + sampleID +'_data.csv')
+    
+            srcSampleLabelsPath = samplePath +  '_labels.csv'
+            shutil.copyfile(srcSampleLabelsPath, outputPath + os.path.sep + sampleID + os.path.sep + sampleID + '_labels.csv')
+           
 
 
 def exportGT_Action(dataPath,outputPath):

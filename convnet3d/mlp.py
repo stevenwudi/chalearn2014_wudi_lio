@@ -61,6 +61,7 @@ class HiddenLayer(object):
         layer_name="HiddenLayer", W=None, b=None, borrow=True, b_scale=0.1,W_scale=0.01):
 
         if W!=None: 
+            #W_val = _asarray(W, dtype=floatX)
             self.W = shared(value=W, borrow=borrow, name=layer_name+'_Wu')
             print activation
         elif activation in ('tanh','sigmoid'):           

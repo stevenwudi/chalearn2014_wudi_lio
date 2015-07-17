@@ -18,7 +18,7 @@ Prior = dic['Prior']
 
 #data path and store path definition
 
-data = "/idiap/user/dwu/chalearn/Test_origin" # dir of original data -- note that wudi has decompressed it!!!
+data = "/idiap/user/dwu/chalearn/Test_GT" # dir of original data -- note that wudi has decompressed it!!!
 obs_likelihodd_dir = "/idiap/user/dwu/chalearn/Test_early_fusion_state_matrix_fast_conv"
 outPred='/idiap/user/dwu/chalearn/Test_early_fusion_pred'
 
@@ -54,35 +54,35 @@ for file_count, file in enumerate(samples):
         end_frame +=5 # because we cut 4 frames as a cuboid so we need add extra 4 frames 
 
         #plotting
-        #gesturesList=sample.getGestures()
-        #import matplotlib.pyplot as plt
-        #STATE_NO = 5
-        #im  = imdisplay(global_score)
-        #plt.clf()
-        #plt.imshow(im, cmap='gray')
-        #plt.plot(range(global_score.shape[-1]), path, color='c',linewidth=2.0)
-        #plt.xlim((0, global_score.shape[-1]))
-        ## plot ground truth
-        #for gesture in gesturesList:
-        ## Get the gesture ID, and start and end frames for the gesture
-        #    gestureID,startFrame,endFrame=gesture
-        #    frames_count = numpy.array(range(startFrame, endFrame+1))
-        #    pred_label_temp = ((gestureID-1) *STATE_NO +2) * numpy.ones(len(frames_count))
-        #    plt.plot(frames_count, pred_label_temp, color='r', linewidth=5.0)
+        gesturesList=sample.getGestures()
+        import matplotlib.pyplot as plt
+        STATE_NO = 5
+        im  = imdisplay(global_score)
+        plt.clf()
+        plt.imshow(im, cmap='gray')
+        plt.plot(range(global_score.shape[-1]), path, color='#39FF14',linewidth=2.0)
+        plt.xlim((0, global_score.shape[-1]))
+        # plot ground truth
+        for gesture in gesturesList:
+        # Get the gesture ID, and start and end frames for the gesture
+            gestureID,startFrame,endFrame=gesture
+            frames_count = numpy.array(range(startFrame, endFrame+1))
+            pred_label_temp = ((gestureID-1) *STATE_NO +2) * numpy.ones(len(frames_count))
+            plt.plot(frames_count, pred_label_temp, color='r', linewidth=5.0)
             
-        ## plot clean path
-        #for i in range(len(begin_frame)):
-        #    frames_count = numpy.array(range(begin_frame[i], end_frame[i]+1))
-        #    pred_label_temp = ((pred_label[i]-1) *STATE_NO +2) * numpy.ones(len(frames_count))
-        #    plt.plot(frames_count, pred_label_temp, color='#39FF14', linewidth=2.0)
+        # plot clean path
+        for i in range(len(begin_frame)):
+            frames_count = numpy.array(range(begin_frame[i], end_frame[i]+1))
+            pred_label_temp = ((pred_label[i]-1) *STATE_NO +2) * numpy.ones(len(frames_count))
+            plt.plot(frames_count, pred_label_temp, color='#FFFF33', linewidth=2.0)
 
-        #if False:
-        #    plt.show()
-        #else:     
-        #    from pylab import savefig
-        #    save_dir=r'/idiap/user/dwu/chalearn/Test_early_fusion_visualisation'
-        #    save_path= os.path.join(save_dir,file)
-        #    savefig(save_path, bbox_inches='tight')
+        if True:
+            plt.show()
+        else:     
+            from pylab import savefig
+            save_dir=r'/idiap/user/dwu/chalearn/Test_early_fusion_visualisation'
+            save_path= os.path.join(save_dir,file)
+            savefig(save_path, bbox_inches='tight')
 
 
 
