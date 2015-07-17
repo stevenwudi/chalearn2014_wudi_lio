@@ -1,5 +1,5 @@
 """
-
+This is the file for DBN
 Di Wu   stevenwudi@gmail.com
 2015-06-12
 """
@@ -23,9 +23,10 @@ from functions.train_functions import _shared, _avg, write, ndtensor, print_para
 from classes.hyperparameters import batch
 from dbn.utils import normalize
 
-from conv3d_chalearn import conv3d_chalearn
-from convnet3d import LogRegr
-import theano.tensor as T
+# customized imports
+from dbn.GRBM_DBN import GRBM_DBN
+from convnet3d_grbm_early_fusion import convnet3d_grbm_early_fusion
+
 
 import scipy.io as sio  
 from time import localtime, time
@@ -33,11 +34,17 @@ from time import localtime, time
 # number of hidden states for each gesture class
 STATE_NO = 5
 #data path and store path definition
-
-
 data = "/idiap/user/dwu/chalearn/Test_video_skel"
-save_dst = "/idiap/user/dwu/chalearn/Test_CNN_stata_matrix"
+save_dst = "/idiap/user/dwu/chalearn/Test_DBN_state_matrix"
 res_dir_ = "/idiap/user/dwu/chalearn/result/"
+
+os.chdir(data)
+samples=glob("*.zip") 
+print len(samples), "samples found"
+
+used_joints = ['ElbowLeft', 'WristLeft', 'ShoulderLeft', 'HandLeft',
+               'ElbowRight', 'WristRight', 'ShoulderRight', 'HandRight',
+               'Head', 'Spine', 'HipCenter']
 
 lt = localtime()
 res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
@@ -46,52 +53,42 @@ res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
 os.makedirs(res_dir)
 
 # we need to parse an absolute path for HPC to load
-#import argparse
-#parser = argparse.ArgumentParser()
-#parser.add_argument('path')# the path to load best parameters
-#args = parser.parse_args()
-#load_path = args.path
-
-load_path='/remote/idiap.svm/user.active/dwu/chalearn/result/try/CNN_normalisation_53.0% 2015.06.23.12.17.31'
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('path')
+args = parser.parse_args()
+load_path = args.path
 ######################################################################
-import cPickle
-f = open('CNN_normalization.pkl','rb')
-CNN_normalization = cPickle.load(f)
-Mean_CNN = CNN_normalization ['Mean_CNN']
-Std_CNN = CNN_normalization['Std_CNN']
+net_convnet3d_grbm_early_fusion = convnet3d_grbm_early_fusion(res_dir, load_path)
 
-# customized data loader for both video module and skeleton module
-#loader = DataLoader_with_skeleton_normalisation(src, tr.batch_size, Mean_CNN, Std_CNN) # Lio changed it to read from HDF5 files
-# we load the CNN parameteres here
-x = ndtensor(len(tr.in_shape))(name = 'x') # video input
+load_path = ...
+net_convnet3d_grbm_early_fusion.load_params(os.path.join(load_path,'paramsbest.zip'))
 x_ = _shared(empty(tr.in_shape))
+x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
+p_y_given_x = net_convnet3d_grbm_early_fusion.prediction_function(x_, x_skeleton_)
+#############################
+# load normalisation constant given load_path
+Mean_skel, Std_skel, Mean_CNN, Std_CNN = net_convnet3d_grbm_early_fusion.load_normalisation_constant(load_path)
 
 
-use.load=True
-use.fast_conv=True
-video_cnn = conv3d_chalearn(x, use, lr, batch, net, reg, drop, mom, tr, res_dir, load_path)
+####################################################################
+# DBN for skeleton modules
+#################################################################### 
+# ------------------------------------------------------------------------------
+# symbolic variables
+x_skeleton = ndtensor(len(tr._skeleon_in_shape))(name = 'x_skeleton') # video input
+x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 
-out = video_cnn.out
-layers = [] # all architecture layers
-# softmax layer
-if use.load:
-    W = load_params(use, load_path)
-    b = load_params(use, load_path)
-    layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden_vid, W=W, b=b,
-        W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
-else:
-    layers.append(LogRegr(out, rng=tr.rng, n_in=net.hidden_vid, 
-        W_scale=net.W_scale[-1], b_scale=net.b_scale[-1], n_out=net.n_class))
+dbn = GRBM_DBN(numpy_rng=random.RandomState(123), n_ins=891, \
+                hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input_x=x_skeleton, label=y )  
+# we load the pretrained DBN skeleton parameteres here
+load_path = ...
+dbn.load(os.path.join(load_path,'dbn_2015-06-19-11-34-24.npy'))
 
+test_model = function([], dbn.logLayer.p_y_given_x, 
+            givens={x_skeleton: x_skeleton_}, 
+            on_unused_input='ignore')
 
-test_model = function([], layers[-1].p_y_given_x, 
-givens={x: x_}, 
-on_unused_input='ignore')
-
-
-os.chdir(data)
-samples=glob(data+"*.zip") 
-print len(samples), "samples found"
 
 for file_count, file in enumerate(samples):
     condition = (file_count > -1)   
@@ -123,18 +120,15 @@ for file_count, file in enumerate(samples):
         observ_likelihood = numpy.empty(shape=(video.shape[0],20*STATE_NO+1)) # 20 classed * 5 states + 1 ergodic state
         for batchnumber in xrange(video.shape[0]/batch.micro):
 
-            video_temp = video[batch.micro*batchnumber:batch.micro*(batchnumber+1),:]
-
-            x_.set_value(normalize(video_temp, Mean_CNN, Std_CNN).astype("float32"),borrow=True)
-            
+            skel_temp =  Feature_gesture[batch.micro*batchnumber:batch.micro*(batchnumber+1),:]  
+            x_skeleton_.set_value(normalize(skel_temp,Mean_skel, Std_skel).astype("float32"), borrow=True)         
             observ_likelihood[batch.micro*batchnumber:batch.micro*(batchnumber+1),:] =  test_model()
 
         # because input batch number should be 64, so here it is a bit of hack:
-        video_temp_1 = video[batch.micro* (batchnumber+1):,:]   
-        video_temp_2 = numpy.zeros(shape=(64-video_temp_1.shape[0], 2, 2, 4, 64, 64))
-        video_temp = numpy.concatenate((video_temp_1, video_temp_2), axis=0)      
-        x_.set_value(normalize(video_temp, Mean_CNN, Std_CNN).astype("float32"),borrow=True)
-
+        skel_temp_1 = Feature_gesture[batch.micro* (batchnumber+1):,:]  
+        skel_temp_2 = numpy.zeros(shape=(64-skel_temp_1.shape[0],891))
+        skel_temp = numpy.concatenate((skel_temp_1, skel_temp_2), axis=0)
+        x_skeleton_.set_value(normalize(skel_temp,Mean_skel, Std_skel).astype("float32"), borrow=True)
         ob_temp = test_model()
         observ_likelihood[batch.micro* (batchnumber+1):,:] =  ob_temp[:video_temp_1.shape[0], :]
 
