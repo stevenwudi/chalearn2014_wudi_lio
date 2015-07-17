@@ -35,8 +35,8 @@ STATE_NO = 5
 #data path and store path definition
 
 
-data = "/idiap/user/dwu/chalearn/Test_CNN_precompute"
-save_dst = "/idiap/user/dwu/chalearn/Test_fusion_precompute"
+data = "/idiap/user/dwu/chalearn/Test_video_skel"
+save_dst = "/idiap/user/dwu/chalearn/Test_CNN_stata_matrix"
 res_dir_ = "/idiap/user/dwu/chalearn/result/"
 
 
@@ -51,11 +51,13 @@ res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
 os.makedirs(res_dir)
 
 # we need to parse an absolute path for HPC to load
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('path')# the path to load best parameters
-args = parser.parse_args()
-load_path = args.path
+#import argparse
+#parser = argparse.ArgumentParser()
+#parser.add_argument('path')# the path to load best parameters
+#args = parser.parse_args()
+#load_path = args.path
+
+loat_path='/remote/idiap.svm/user.active/dwu/chalearn/result/try/CNN_normalisation_53.0% 2015.06.23.12.17.31'
 ######################################################################
 import cPickle
 f = open('CNN_normalization.pkl','rb')
@@ -71,7 +73,7 @@ x_ = _shared(empty(tr.in_shape))
 
 
 use.load=True
-use.fast_conv=False
+use.fast_conv=True
 video_cnn = conv3d_chalearn(x, use, lr, batch, net, reg, drop, mom, tr, res_dir, load_path)
 
 out = video_cnn.out
