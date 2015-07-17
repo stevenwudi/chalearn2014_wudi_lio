@@ -55,7 +55,7 @@ os.makedirs(res_dir)
 #args = parser.parse_args()
 #load_path = args.path
 
-loat_path='/remote/idiap.svm/user.active/dwu/chalearn/result/try/CNN_normalisation_53.0% 2015.06.23.12.17.31'
+load_path='/remote/idiap.svm/user.active/dwu/chalearn/result/try/CNN_normalisation_53.0% 2015.06.23.12.17.31'
 ######################################################################
 import cPickle
 f = open('CNN_normalization.pkl','rb')
