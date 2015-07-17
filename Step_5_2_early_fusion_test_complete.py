@@ -32,7 +32,7 @@ from time import localtime, time
 # number of hidden states for each gesture class
 STATE_NO = 5
 #data path and store path definition
-data = "/idiap/user/dwu/chalearn/Test_CNN_precompute"
+data = "/idiap/user/dwu/chalearn/Test_video_skel"
 save_dst = "/idiap/user/dwu/chalearn/Test_fusion_precompute"
 res_dir_ = "/idiap/user/dwu/chalearn/result/"
 
