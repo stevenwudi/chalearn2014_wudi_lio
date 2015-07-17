@@ -317,6 +317,7 @@ def load_params(use, load_path=""):
         file = GzipFile("params.zip", "rb")
     par = load(file)
     file.close()
+    print 'load parameters'
     W = par[use.load_params_pos]
     
     if not use.fast_conv:
@@ -327,4 +328,5 @@ def load_params(use, load_path=""):
             W = W[:, :, :, ::-1, ::-1]
     b = par[use.load_params_pos+1]
     use.load_params_pos +=2
+    
     return W,b

@@ -99,9 +99,10 @@ for file_count, file in enumerate(samples):
         del sample
 
 
-#outPred=r'D:\Chalearn2014\Test_early_fusion_pred'    
-#TruthDir=r'D:\Chalearn2014\ChalearnLAP2104_EvaluateTrack3\input\ref'
-
 TruthDir='/idiap/user/dwu/chalearn/Test_GT'
+
+
+outPred=r'D:\Chalearn2014\Test_early_fusion_fast_conv'    
+TruthDir=r'D:\Chalearn2014\ChalearnLAP2104_EvaluateTrack3\input\ref'
 final_score = evalGesture(outPred,TruthDir)         
 print("The score for this prediction is " + "{:.12f}".format(final_score))

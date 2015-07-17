@@ -1,4 +1,4 @@
-from numpy import array, prod
+from numpy import array, prod, float32
 
 # theano import
 from theano import shared
@@ -90,7 +90,9 @@ class conv3d_chalearn(object):
 
         # dropout
         if use.drop: 
-            vid_ = DropoutLayer(vid_, rng=tr.rng, p=drop.p_vid).output
+            drop.p_vid = shared(float32(drop.p_vid_val) )
+            drop.p_hidden = shared(float32(drop.p_hidden_val))
+            vid_ = DropoutLayer(vid_, rng=tr.rng, p=drop.p_hidden).output
 
         #maxout
         if use.maxout:
@@ -105,8 +107,14 @@ class conv3d_chalearn(object):
         if net.fusion == "early":
             out = vid_
             # hidden layer
-            self.layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden_vid, rng=tr.rng, 
-                W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=net.activation))
+            if use.load:
+                W = load_params(use, load_path)
+                b = load_params(use, load_path)
+                self.layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden_vid, rng=tr.rng, W=W, b=b,
+                    W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=net.activation))
+            else:
+                self.layers.append(HiddenLayer(out, n_in=n_in_MLP, n_out=net.hidden_vid, rng=tr.rng, 
+                    W_scale=net.W_scale[-2], b_scale=net.b_scale[-2], activation=net.activation))
             out = self.layers[-1].output
 
 

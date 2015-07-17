@@ -36,7 +36,7 @@ class convnet3d_grbm_early_fusion():
         # symbolic variables
         self.x_skeleton = ndtensor(len(tr._skeleon_in_shape))(name = 'x_skeleton') # video input
 
-        if use.mom: 
+        if use.drop: 
             drop.p_vid = shared(float32(drop.p_vid_val) )
             drop.p_hidden = shared(float32(drop.p_hidden_val))
         video_cnn = conv3d_chalearn(self.x, use, lr, batch, net, reg, drop, mom, \
