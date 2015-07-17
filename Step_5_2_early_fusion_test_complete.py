@@ -33,7 +33,7 @@ from time import localtime, time
 STATE_NO = 5
 #data path and store path definition
 data = "/idiap/user/dwu/chalearn/Test_video_skel"
-save_dst = "/idiap/user/dwu/chalearn/Test_fusion_precompute"
+save_dst = "/idiap/user/dwu/chalearn/Test_early_fusion_state_matrix_fast_conv"
 res_dir_ = "/idiap/user/dwu/chalearn/result/"
 
 os.chdir(data)
