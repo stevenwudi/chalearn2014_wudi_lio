@@ -15,7 +15,7 @@ class use:
     load = False # load params.p file
     load_params_pos = 0
     valid2 = False
-    fast_conv = False
+    fast_conv = True
     norm_div = False
     maxout = False
     norm = True # normalization layer
