@@ -7,7 +7,7 @@ import theano.tensor as T
 from convnet3d import ConvLayer, NormLayer, PoolLayer, LogRegr, HiddenLayer, \
                     DropoutLayer, relu, leaky_relu
 
-from functions.train_functions import write, conv_args, var_norm, std_norm, lin
+from functions.train_functions import write, conv_args, var_norm, std_norm, lin, load_params
 
 class conv3d_chalearn(object):
     """
