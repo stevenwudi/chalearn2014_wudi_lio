@@ -133,7 +133,7 @@ for file_count, file in enumerate(samples):
 
 
 #TruthDir='/idiap/user/dwu/chalearn/Test_GT'
-
+from functions.test_functions import *
 outPred=r'D:\Chalearn2014\Test_early_fusion_pred'    
 TruthDir=r'D:\Chalearn2014\ChalearnLAP2104_EvaluateTrack3\input\ref'
 final_score = evalGesture(outPred,TruthDir)         
@@ -142,3 +142,6 @@ print("The score for this prediction is " + "{:.12f}".format(final_score))
 
 # The score for this prediction is 0.591371878059
 # threshold=-2, mini_frame=19
+
+# The score for this prediction is 0.698058446960
+# threshold=-5, mini_frame=10

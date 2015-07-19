@@ -34,9 +34,18 @@ from time import localtime, time
 # number of hidden states for each gesture class
 STATE_NO = 5
 #data path and store path definition
-data = "/idiap/user/dwu/chalearn/Test_video_skel"
-save_dst = "/idiap/user/dwu/chalearn/Test_DBN_state_matrix"
-res_dir_ = "/idiap/user/dwu/chalearn/result/"
+pc="linux"
+pc="windows"
+
+if pc=="linux":
+    data = "/idiap/user/dwu/chalearn/Test_video_skel"
+    save_dst = "/idiap/user/dwu/chalearn/Test_DBN_state_matrix"
+    res_dir_ = "/idiap/user/dwu/chalearn/result/"
+elif pc=="windows":
+    data = "/idiap/user/dwu/chalearn/Test_video_skel"
+    save_dst = "/idiap/user/dwu/chalearn/Test_DBN_state_matrix"
+    res_dir_ = "/idiap/user/dwu/chalearn/result/"
+
 
 os.chdir(data)
 samples=glob("*.zip") 
