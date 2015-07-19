@@ -53,15 +53,11 @@ res_dir = res_dir_+"/try/"+str(lt.tm_year)+"."+str(lt.tm_mon).zfill(2)+"." \
 os.makedirs(res_dir)
 
 # we need to parse an absolute path for HPC to load
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('path')
-args = parser.parse_args()
-load_path = args.path
+load_path = '/idiap/home/dwu/chalearn2014_wudi_lio/chalearn2014_wudi_lio'
 ######################################################################
 net_convnet3d_grbm_early_fusion = convnet3d_grbm_early_fusion(res_dir, load_path)
 
-load_path = ...
+load_path = '/idiap/home/dwu/chalearn2014_wudi_lio/chalearn2014_wudi_lio'
 net_convnet3d_grbm_early_fusion.load_params(os.path.join(load_path,'paramsbest.zip'))
 x_ = _shared(empty(tr.in_shape))
 x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
@@ -82,8 +78,8 @@ x_skeleton_ = _shared(empty(tr._skeleon_in_shape))
 dbn = GRBM_DBN(numpy_rng=random.RandomState(123), n_ins=891, \
                 hidden_layers_sizes=[2000, 2000, 1000], n_outs=101, input_x=x_skeleton, label=y )  
 # we load the pretrained DBN skeleton parameteres here
-load_path = ...
-dbn.load(os.path.join(load_path,'dbn_2015-06-19-11-34-24.npy'))
+load_path = '/idiap/user/dwu/chalearn/result/try/36.7% 2015.07.09.17.53.10'
+dbn.load_params_DBN(os.path.join(load_path,'paramsbest.zip'))
 
 test_model = function([], dbn.logLayer.p_y_given_x, 
             givens={x_skeleton: x_skeleton_}, 

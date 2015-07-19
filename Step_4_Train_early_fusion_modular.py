@@ -94,7 +94,10 @@ res_dir = save_results(train_ce, valid_ce, res_dir, params=net_convnet3d_grbm_ea
 
 save_params(net_convnet3d_grbm_early_fusion.params, res_dir)
 
-
+# default learning rate
+lr.start = 0.0001
+lr.stop = 0.00001
+  
 # Wudi makes thie to explicity control the learning rate
 learning_rate_map = linspace(lr.start, lr.stop, tr.n_epochs)
 
