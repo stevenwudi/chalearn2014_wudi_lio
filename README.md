@@ -7,6 +7,7 @@ Citation
 If you use this toolbox as part of a research project, please consider citing the corresponding paper
 ******************************************************************************************************
 
+```
 @inproceedings{IEEE Transactions on Pattern Analysis and Machine Intelligence (T-PAMI)},
 
   title={Deep Dynamic Neural Networks for Multimodal Gesture Segmentation and Recognition},
@@ -15,6 +16,7 @@ If you use this toolbox as part of a research project, please consider citing th
   
   year={2016}
 }
+```
 ******************************************************************************************************
 
 
