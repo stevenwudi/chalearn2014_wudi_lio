@@ -7,10 +7,10 @@ Citation
 If you use this toolbox as part of a research project, please consider citing the corresponding paper
 ******************************************************************************************************
 @inproceedings{..,
-  title={},
-  author={},
-  booktitle={},
-  year={}
+  title={Deep Dynamic Neural Networks for Multimodal Gesture Segmentation and Recognition},
+  author={Di Wu, Lionel Pigou, Pieter-Jan Kindermans, Nam LE, Ling Shao, Joni Dambr},
+  booktitle={IEEE Transactions on Pattern Analysis and Machine Intelligence (T-PAMI)},
+  year={2016}
 }
 ******************************************************************************************************
 
@@ -18,9 +18,6 @@ If you use this toolbox as part of a research project, please consider citing th
 Dependency: Theano
 -------
 
-	
-To Lio:
--------
 To train the network, you first need to run the following code:
 This is the very first file that you should run to extract training data (skeleton data and the depth and rgb data).
 
