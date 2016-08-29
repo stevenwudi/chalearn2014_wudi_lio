@@ -6,10 +6,9 @@ Citation
 -------
 If you use this toolbox as part of a research project, please consider citing the corresponding paper
 ******************************************************************************************************
-@inproceedings{..,
+@inproceedings{IEEE Transactions on Pattern Analysis and Machine Intelligence (T-PAMI)},
   title={Deep Dynamic Neural Networks for Multimodal Gesture Segmentation and Recognition},
   author={Di Wu, Lionel Pigou, Pieter-Jan Kindermans, Nam LE, Ling Shao, Joni Dambr},
-  booktitle={IEEE Transactions on Pattern Analysis and Machine Intelligence (T-PAMI)},
   year={2016}
 }
 ******************************************************************************************************
